@@ -1,0 +1,6 @@
+{
+  "name": "سامانه ترانسبان - شرکت توزیع نیروی برق استان قزوین",
+  "description": "سامانه پایش هوشمند ترانسفورماتورها، محاسبه شاخص سلامت (HI)، پیش‌بینی بار و مدیریت دارایی‌های توزیع برق قزوین",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
