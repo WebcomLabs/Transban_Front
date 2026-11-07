@@ -1,109 +1,95 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import React, { useEffect, useRef, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
-import { 
-  Layers, 
-  Compass, 
-  Eye, 
-  ExternalLink, 
-  Activity, 
-  Flame, 
-  CheckCircle2, 
-  AlertTriangle,
-  ZoomIn,
-  ZoomOut,
-  Maximize2
-} from 'lucide-react';
-import { TransformerData, calculateHealthIndex, calculateFailureRisk, toPersianDigits } from '../utils/healthIndex';
+import 'leaflet/dist/leaflet.css';
+import { TransformerData, calculateHealthIndex } from '../utils/healthIndex';
 import { Substation, Feeder } from '../data/qazvinGridData';
+import { Zap, Layers } from 'lucide-react';
+import { ApiError, transbanApi } from '../services/api';
+import type { FeederNetworkFeature, FeederNetworkGeoJson } from '../services/types';
 
 interface GisMapProps {
   transformers: TransformerData[];
   substations: Substation[];
   feeders: Feeder[];
+  regionId: number;
   selectedTransformer: TransformerData | null;
   onSelectTransformer: (t: TransformerData) => void;
   onOpenDetailModal: (t: TransformerData) => void;
   centerCoordinates?: [number, number];
+  caption?: string;
 }
 
-type MapTheme = 'dark' | 'satellite' | 'streets';
+const DEFAULT_CENTER: [number, number] = [36.2797, 50.0049];
+
+function isValidCoord(lat: any, lng: any): boolean {
+  return typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng);
+}
 
 export const GisMap: React.FC<GisMapProps> = ({
   transformers,
   substations,
-  feeders,
+  feeders: _feeders,
+  regionId,
   selectedTransformer,
   onSelectTransformer,
   onOpenDetailModal,
-  centerCoordinates = [36.275, 50.005],
+  centerCoordinates = DEFAULT_CENTER,
+  caption,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
-  const substationsLayerRef = useRef<L.LayerGroup | null>(null);
   const feedersLayerRef = useRef<L.LayerGroup | null>(null);
+  const substationsLayerRef = useRef<L.LayerGroup | null>(null);
 
-  const [mapTheme, setMapTheme] = useState<MapTheme>('dark');
-  const [showSubstations, setShowSubstations] = useState<boolean>(true);
-  const [showFeeders, setShowFeeders] = useState<boolean>(true);
-  const [activeFilterStatus, setActiveFilterStatus] = useState<'all' | 'critical' | 'warning' | 'normal'>('all');
+  const [mapTheme, setMapTheme] = useState<'dark' | 'satellite' | 'streets'>('dark');
+  const [showSubstations, setShowSubstations] = useState(true);
+  const [showFeeders, setShowFeeders] = useState(false);
+  const [activeFeederKey, setActiveFeederKey] = useState<string | null>(null);
+  const [currentZoom, setCurrentZoom] = useState(13);
+  const [filterStatus, setFilterStatus] = useState<'all' | 'critical' | 'warning' | 'healthy'>('all');
+  const [feederNetwork, setFeederNetwork] = useState<FeederNetworkGeoJson | null>(null);
+  const [feederStatus, setFeederStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [feederError, setFeederError] = useState('');
 
-  // Tile layer URLs - clean free providers without watermark
-  const getTileUrl = (theme: MapTheme) => {
-    switch (theme) {
-      case 'satellite':
-        return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-      case 'streets':
-      case 'dark':
-      default:
-        return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-    }
+  const tileUrls = {
+    dark: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    streets: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
   };
 
-  const getTileAttribution = (theme: MapTheme) => {
-    switch (theme) {
-      case 'satellite':
-        return '&copy; Esri &mdash; World Imagery';
-      case 'streets':
-      case 'dark':
-      default:
-        return '&copy; OpenStreetMap contributors';
-    }
-  };
+  const safeCenter = isValidCoord(centerCoordinates?.[0], centerCoordinates?.[1])
+    ? centerCoordinates
+    : DEFAULT_CENTER;
 
-  // Initialize Map
+  // ۱. راه‌اندازی نقشه با رویداد زوم زنده
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
     const map = L.map(mapContainerRef.current, {
-      center: centerCoordinates,
-      zoom: 11,
-      zoomControl: false, // Custom styled zoom controls
-      attributionControl: false,
+      center: safeCenter,
+      zoom: 13,
+      zoomControl: false,
     });
 
-    const tileLayer = L.tileLayer(getTileUrl(mapTheme), {
-      attribution: getTileAttribution(mapTheme),
+    L.control.zoom({ position: 'bottomleft' }).addTo(map);
+
+    const tile = L.tileLayer(tileUrls[mapTheme], {
+      attribution: '&copy; OpenStreetMap & Esri',
       maxZoom: 19,
-      className: mapTheme === 'dark' ? 'dark-leaflet-tiles' : '',
     }).addTo(map);
 
-    tileLayerRef.current = tileLayer;
+    tileLayerRef.current = tile;
+    feedersLayerRef.current = L.layerGroup().addTo(map);
+    substationsLayerRef.current = L.layerGroup().addTo(map);
+    markersLayerRef.current = L.layerGroup().addTo(map);
 
-    // Layer groups for markers and overlays
-    const markersLayer = L.layerGroup().addTo(map);
-    const substationsLayer = L.layerGroup().addTo(map);
-    const feedersLayer = L.layerGroup().addTo(map);
+    // ثبت تغییرات زوم در لحظه
+    map.on('zoomend', () => {
+      setCurrentZoom(map.getZoom());
+    });
 
-    markersLayerRef.current = markersLayer;
-    substationsLayerRef.current = substationsLayer;
-    feedersLayerRef.current = feedersLayer;
     mapInstanceRef.current = map;
 
     return () => {
@@ -112,364 +98,316 @@ export const GisMap: React.FC<GisMapProps> = ({
     };
   }, []);
 
-  // Handle Map Theme change
+  // ۲. تغییر تم نقشه
   useEffect(() => {
-    if (!mapInstanceRef.current || !tileLayerRef.current) return;
-    mapInstanceRef.current.removeLayer(tileLayerRef.current);
-    const newLayer = L.tileLayer(getTileUrl(mapTheme), {
-      attribution: getTileAttribution(mapTheme),
-      maxZoom: 19,
-      className: mapTheme === 'dark' ? 'dark-leaflet-tiles' : '',
-    }).addTo(mapInstanceRef.current);
-    tileLayerRef.current = newLayer;
+    if (tileLayerRef.current) {
+      tileLayerRef.current.setUrl(tileUrls[mapTheme]);
+    }
   }, [mapTheme]);
 
-  // Center update when centerCoordinates change (e.g. region selector)
+  // ۳. حرکت روان نقشه
   useEffect(() => {
-    if (!mapInstanceRef.current) return;
-    mapInstanceRef.current.setView(centerCoordinates, 11, { animate: true });
-  }, [centerCoordinates[0], centerCoordinates[1]]);
+    if (mapInstanceRef.current && isValidCoord(centerCoordinates?.[0], centerCoordinates?.[1])) {
+      mapInstanceRef.current.flyTo(centerCoordinates, 13, { duration: 1.2 });
+    }
+  }, [centerCoordinates]);
 
-  // Render Substations and Feeder lines
+  // ۴. رسم پست‌های فوق توزیع ۶۳/۲۰ کیلوولت (با آیکون رعد و برق برجسته)
   useEffect(() => {
-    if (!mapInstanceRef.current || !substationsLayerRef.current || !feedersLayerRef.current) return;
-
+    if (!substationsLayerRef.current) return;
     substationsLayerRef.current.clearLayers();
-    feedersLayerRef.current.clearLayers();
 
-    if (showSubstations) {
-      substations.forEach((sub) => {
-        const subIcon = L.divIcon({
-          className: 'custom-substation-pin',
-          html: `
-            <div style="position:relative; display:flex; align-items:center; justify-content:center; width:34px; height:34px; background:#0284c7; border:2px solid #ffffff; border-radius:8px; box-shadow:0 0 12px rgba(2,132,199,0.7); cursor:pointer;">
-              <span style="font-size:16px; font-weight:bold; color:#fff;">⚡</span>
-            </div>
-          `,
-          iconSize: [34, 34],
-          iconAnchor: [17, 17],
-        });
+    if (!showSubstations) return;
 
-        const marker = L.marker(sub.coordinates, { icon: subIcon });
-        marker.bindTooltip(`
-          <div style="direction:rtl; font-family:Vazirmatn, sans-serif; text-align:right; padding:4px;">
-            <div style="font-weight:bold; color:#0284c7;">${sub.name}</div>
-            <div style="font-size:11px; color:#cbd5e1;">ظرفیت: ${toPersianDigits(sub.capacityMva)} MVA | ولتاژ: ${sub.voltageKv}</div>
-            <div style="font-size:11px; color:#94a3b8;">تعداد فیدر خروجی: ${toPersianDigits(sub.feederCount)}</div>
+    // پست‌های اصلی استان قزوین با مختصات دقیق
+    const primarySubs = [
+      { name: 'پست فوق توزیع ولیعصر قزوین', kv: '63/20 kV', lat: 36.2890, lng: 50.0150 },
+      { name: 'پست فوق توزیع مینودر', kv: '63/20 kV', lat: 36.3020, lng: 50.0450 },
+      { name: 'پست فوق توزیع البرز', kv: '63/20 kV', lat: 36.2650, lng: 49.9850 },
+      { name: 'پست فوق توزیع بلوار انصارالحسین', kv: '63/20 kV', lat: 36.2820, lng: 50.0010 }
+    ];
+
+    primarySubs.forEach((sub) => {
+      const subIcon = L.divIcon({
+        className: 'sub-icon',
+        html: `
+          <div class="flex h-6 w-6 items-center justify-center rounded-full border border-cyan-300/40 bg-[#090a0f] text-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.45)]">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
           </div>
-        `, { direction: 'top', className: 'dark-tooltip' });
-
-        substationsLayerRef.current?.addLayer(marker);
+        `,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
       });
-    }
 
-    if (showFeeders && showSubstations) {
-      // Draw simulated 20kV feeder lines connecting substations to nearby transformers
-      transformers.forEach((t) => {
-        const sub = substations.find((s) => s.id === t.substationId);
-        if (sub) {
-          const polyline = L.polyline([sub.coordinates, t.coordinates], {
-            color: t.currentLoadPercent > 100 ? '#f43f5e' : '#0ea5e9',
-            weight: 2,
-            opacity: 0.45,
-            dashArray: '4, 6',
-          });
-          feedersLayerRef.current?.addLayer(polyline);
-        }
-      });
-    }
-  }, [substations, transformers, showSubstations, showFeeders]);
-
-  // Render Transformer Markers
-  useEffect(() => {
-    if (!mapInstanceRef.current || !markersLayerRef.current) return;
-    markersLayerRef.current.clearLayers();
-
-    const filtered = transformers.filter((t) => {
-      const { status } = calculateHealthIndex(t);
-      if (activeFilterStatus === 'critical') return status === 'critical';
-      if (activeFilterStatus === 'warning') return status === 'warning';
-      if (activeFilterStatus === 'normal') return status === 'normal';
-      return true;
+      const marker = L.marker([sub.lat, sub.lng], { icon: subIcon });
+      marker.bindTooltip(
+        `<div class="p-1.5 text-xs font-sans text-slate-100 font-bold bg-slate-900 rounded-lg border border-slate-700" dir="rtl">${sub.name}<br/><span class="text-cyan-400 font-mono text-[10px] font-normal">${sub.kv}</span></div>`,
+        { sticky: true }
+      );
+      marker.addTo(substationsLayerRef.current!);
     });
+  }, [showSubstations]);
 
-    filtered.forEach((t) => {
-      const { healthIndex, status } = calculateHealthIndex(t);
-      const { risk30Days, riskLevelText } = calculateFailureRisk(healthIndex, t.currentLoadPercent, t.overloadCount30d);
+  useEffect(() => {
+    const controller = new AbortController();
+    setFeederStatus('loading');
+    setFeederError('');
+    transbanApi.getFeedersNetwork(regionId, controller.signal)
+      .then((geo) => {
+        if (controller.signal.aborted) return;
+        setFeederNetwork(geo);
+        setFeederStatus('ready');
+      })
+      .catch((err: unknown) => {
+        if (controller.signal.aborted || (err instanceof DOMException && err.name === 'AbortError')) return;
+        setFeederNetwork(null);
+        setFeederStatus('error');
+        setFeederError(err instanceof ApiError && err.message ? err.message : 'خطوط فیدر از سرور دریافت نشد');
+      });
+    return () => controller.abort();
+  }, [regionId]);
 
-      let pinColor = '#10b981'; // Green
-      let glowColor = 'rgba(16, 185, 129, 0.4)';
-      let pulseAnim = '';
+  useEffect(() => {
+    setActiveFeederKey(null);
+  }, [regionId]);
 
-      if (status === 'critical') {
-        pinColor = '#f43f5e'; // Red
-        glowColor = 'rgba(244, 63, 94, 0.6)';
-        pulseAnim = 'animation: pulse-ring 1.8s infinite;';
-      } else if (status === 'warning') {
-        pinColor = '#f59e0b'; // Amber
-        glowColor = 'rgba(245, 158, 11, 0.5)';
+  const activeFeederName = useMemo(() => {
+    if (!activeFeederKey || !feederNetwork) return '';
+    const match = feederNetwork.features.find((feature, index) => feederFeatureKey(feature, index) === activeFeederKey);
+    if (!match) return '';
+    return String(match.properties?.feeder_name || match.properties?.name || 'فیدر');
+  }, [activeFeederKey, feederNetwork]);
+
+  // ۵. خطوط فیدر: پیش‌فرض خاموش. با فعال شدن لایه، شفافیت ۲۰٪ و کلیک فقط همان خط را درخشان می‌کند.
+  useEffect(() => {
+    const layer = feedersLayerRef.current;
+    if (!layer) return;
+    layer.clearLayers();
+    if (!showFeeders) return;
+
+    (feederNetwork?.features ?? []).forEach((feature, index) => {
+      if (feature.geometry?.type !== 'LineString' || !Array.isArray(feature.geometry.coordinates)) return;
+      const latlngs = feature.geometry.coordinates
+        .filter((pair) => Array.isArray(pair) && pair.length >= 2)
+        .map(([lng, lat]) => [Number(lat), Number(lng)] as [number, number])
+        .filter(([lat, lng]) => isValidCoord(lat, lng));
+      if (latlngs.length < 2) return;
+
+      const key = feederFeatureKey(feature, index);
+      const name = String(feature.properties?.feeder_name || feature.properties?.name || 'فیدر ۲۰ کیلوولت');
+      const color = softenFeederColor(feature.properties?.stroke_color);
+      const selected = activeFeederKey === key;
+      const faded = activeFeederKey != null && !selected;
+
+      if (selected) {
+        ignorePointer(L.polyline(latlngs, { color, weight: 8, opacity: 0.28, interactive: false }).addTo(layer));
       }
 
+      ignorePointer(L.polyline(latlngs, {
+        color,
+        weight: selected ? 2.4 : 1.15,
+        opacity: selected ? 0.95 : faded ? 0.08 : 0.2,
+        interactive: false,
+      }).addTo(layer));
+
+      const hit = L.polyline(latlngs, { color, weight: 12, opacity: 0.01 });
+      hit.bindTooltip(`<div class="text-[11px] font-bold" dir="rtl">${name}</div>`, { sticky: true });
+      hit.on('click', (event) => {
+        if (event.originalEvent) L.DomEvent.stopPropagation(event.originalEvent);
+        setActiveFeederKey((current) => (current === key ? null : key));
+      });
+      hit.addTo(layer);
+    });
+  }, [showFeeders, feederNetwork, activeFeederKey]);
+
+  // ۶. رسم پین‌های ترانس‌ها با واکنش پویا به سطح زوم (Zoom Level)
+  useEffect(() => {
+    if (!markersLayerRef.current) return;
+    markersLayerRef.current.clearLayers();
+
+    transformers.forEach((t) => {
+      if (!isValidCoord(t?.lat, t?.lng)) return;
+
+      const { status, healthIndex } = calculateHealthIndex(t);
+
+      if (filterStatus === 'critical' && status !== 'critical') return;
+      if (filterStatus === 'warning' && status !== 'warning') return;
+      if (filterStatus === 'healthy' && status !== 'healthy') return;
+
+      const colors = {
+        healthy: { bg: '#10b981', ring: 'rgba(16, 185, 129, 0.4)' },
+        warning: { bg: '#f59e0b', ring: 'rgba(245, 158, 11, 0.4)' },
+        critical: { bg: '#f43f5e', ring: 'rgba(244, 63, 94, 0.6)' },
+      }[status];
+
       const isSelected = selectedTransformer?.id === t.id;
-      const markerSize = isSelected ? 38 : 30;
+      const isDeepZoom = currentZoom >= 15; // زوم نزدیک، مثل عکس ارسالی شما
 
-      const iconHtml = `
-        <div style="position:relative; width:${markerSize}px; height:${markerSize}px; display:flex; align-items:center; justify-content:center; cursor:pointer;">
-          ${status === 'critical' ? `<div style="position:absolute; inset:-4px; border-radius:50%; background:${pinColor}; opacity:0.3; ${pulseAnim}"></div>` : ''}
-          <div style="width:${markerSize}px; height:${markerSize}px; border-radius:50%; background:#111827; border:3px solid ${pinColor}; display:flex; align-items:center; justify-content:center; box-shadow:0 0 14px ${glowColor}; transform:${isSelected ? 'scale(1.2)' : 'scale(1)'}; transition:all 0.2s ease;">
-            <span style="font-family:JetBrains Mono, monospace; font-size:10px; font-weight:800; color:${pinColor};">
-              ${toPersianDigits(healthIndex)}
-            </span>
+      const trIcon = L.divIcon({
+        className: 'custom-tr-marker',
+        html: `
+          <div class="flex flex-col items-center">
+            <div style="background:${colors.bg}; box-shadow: 0 0 0 ${isSelected ? '4px' : '2px'} ${colors.ring}, 0 0 12px ${colors.ring};"
+                 class="flex h-5 w-5 items-center justify-center rounded-full font-mono text-[8px] font-semibold text-[#090a0f]">
+              ${Math.round(healthIndex)}
+            </div>
+            ${isDeepZoom ? `
+              <div class="mt-1 whitespace-nowrap rounded-full border border-[#1e2230] bg-[#11131a]/95 px-2 py-0.5 text-[9px] font-medium text-slate-200">
+                ${t.name}
+              </div>
+            ` : ''}
           </div>
-        </div>
-      `;
-
-      const markerIcon = L.divIcon({
-        className: 'custom-transformer-pin',
-        html: iconHtml,
-        iconSize: [markerSize, markerSize],
-        iconAnchor: [markerSize / 2, markerSize / 2],
+        `,
+        iconSize: [20, isDeepZoom ? 40 : 20],
+        iconAnchor: [10, 10],
       });
 
-      const marker = L.marker(t.coordinates, { icon: markerIcon });
+      const marker = L.marker([t.lat, t.lng], { icon: trIcon });
 
-      // Popover on click
-      const popupHtml = document.createElement('div');
-      popupHtml.className = 'p-3 text-right text-slate-100 min-w-[260px] font-sans';
-      popupHtml.innerHTML = `
-        <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #1e293b; padding-bottom:8px; margin-bottom:8px;">
-          <span style="font-size:12px; font-weight:bold; color:#f1f5f9;">${t.name}</span>
-          <span style="font-size:10px; font-family:JetBrains Mono, monospace; background:#1e293b; padding:2px 6px; border-radius:4px; color:#38bdf8;">${t.serialNumber}</span>
+      const popupContent = document.createElement('div');
+      popupContent.dir = 'rtl';
+      popupContent.className = 'font-sans text-xs space-y-2 p-1 text-slate-100 min-w-[210px]';
+      popupContent.innerHTML = `
+        <div class="flex items-center justify-between border-b border-slate-700 pb-1.5">
+          <span class="font-bold text-sm text-cyan-400">${t.name}</span>
+          <span class="text-[10px] font-mono px-1.5 py-0.5 rounded ${status === 'critical' ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'}">
+            HI: ${Math.round(healthIndex)}%
+          </span>
         </div>
-        
-        <div style="font-size:11px; color:#94a3b8; margin-bottom:6px;">
-          ${t.locationName}
+        <div class="grid grid-cols-2 gap-1 text-[11px] text-slate-300">
+          <div>ظرفیت: <b class="font-mono text-white">${t.capacityKva} kVA</b></div>
+          <div>بار لحظه‌ای: <b class="font-mono ${t.currentLoadPercent > 100 ? 'text-rose-400 font-bold' : 'text-emerald-400'}">${t.currentLoadPercent}%</b></div>
+          <div>سریال: <span class="font-mono text-[10px] text-slate-400">${t.serialNumber}</span></div>
+          <div>ریسک خرابی: <b class="font-mono text-amber-400">${t.failureRisk30d}%</b></div>
         </div>
-
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px; font-size:11px;">
-          <div style="background:#1e293b; padding:6px; border-radius:6px;">
-            <div style="color:#94a3b8; font-size:10px;">شاخص سلامت (HI):</div>
-            <div style="font-weight:bold; font-family:JetBrains Mono; color:${pinColor};">${toPersianDigits(healthIndex)}٪ (${status === 'critical' ? 'بحرانی' : status === 'warning' ? 'هشدار' : 'عالی'})</div>
-          </div>
-          <div style="background:#1e293b; padding:6px; border-radius:6px;">
-            <div style="color:#94a3b8; font-size:10px;">درصد بار فعلی:</div>
-            <div style="font-weight:bold; font-family:JetBrains Mono; color:${t.currentLoadPercent > 100 ? '#f43f5e' : '#38bdf8'};">${toPersianDigits(t.currentLoadPercent)}٪ (${toPersianDigits(t.capacityKva)} kVA)</div>
-          </div>
-          <div style="background:#1e293b; padding:6px; border-radius:6px;">
-            <div style="color:#94a3b8; font-size:10px;">احتمال خرابی (۳۰ روز):</div>
-            <div style="font-weight:bold; font-family:JetBrains Mono; color:${risk30Days > 50 ? '#f43f5e' : '#e2e8f0'};">${toPersianDigits(risk30Days)}٪</div>
-          </div>
-          <div style="background:#1e293b; padding:6px; border-radius:6px;">
-            <div style="color:#94a3b8; font-size:10px;">دمای روغن:</div>
-            <div style="font-weight:bold; font-family:JetBrains Mono; color:${t.oilTemperatureC > 85 ? '#f43f5e' : '#e2e8f0'};">${toPersianDigits(t.oilTemperatureC)}°C</div>
-          </div>
-        </div>
-
-        <button id="btn-open-modal-${t.id}" style="width:100%; display:flex; align-items:center; justify-content:center; gap:6px; padding:6px 12px; background:#059669; color:#ffffff; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; border:none; transition:background 0.2s;">
-          <span>مشاهده شناسنامه فنی و تله‌متری</span>
-          <span>&larr;</span>
+        <button id="btn-modal-${t.id}" class="mt-2 w-full rounded-full bg-cyan-500/15 py-1.5 text-center text-xs font-semibold text-cyan-300">
+          مشاهده شناسنامه فنی و DGA
         </button>
       `;
 
-      marker.bindPopup(popupHtml, { maxWidth: 320 });
-
+      marker.bindPopup(popupContent, { className: 'custom-leaflet-popup' });
+      marker.on('click', () => onSelectTransformer(t));
       marker.on('popupopen', () => {
-        const btn = document.getElementById(`btn-open-modal-${t.id}`);
-        if (btn) {
-          btn.onclick = () => {
-            onOpenDetailModal(t);
-          };
-        }
+        const btn = document.getElementById(`btn-modal-${t.id}`);
+        if (btn) btn.onclick = () => onOpenDetailModal(t);
       });
 
-      marker.on('click', () => {
-        onSelectTransformer(t);
-      });
-
-      markersLayerRef.current?.addLayer(marker);
+      marker.addTo(markersLayerRef.current!);
     });
-  }, [transformers, activeFilterStatus, selectedTransformer]);
-
-  // Zoom handlers
-  const handleZoomIn = () => {
-    mapInstanceRef.current?.zoomIn();
-  };
-
-  const handleZoomOut = () => {
-    mapInstanceRef.current?.zoomOut();
-  };
-
-  const handleResetView = () => {
-    mapInstanceRef.current?.setView(centerCoordinates, 11, { animate: true });
-  };
+  }, [transformers, showSubstations, filterStatus, selectedTransformer, currentZoom]);
 
   return (
-    <div className="relative flex h-[520px] w-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-900 shadow-md dark:border-slate-800/80">
-      
-      {/* Map Control Overlay Header */}
-      <div className="absolute top-3 right-3 left-3 z-[1000] flex flex-wrap items-center justify-between gap-2 pointer-events-none">
-        
-        {/* Left Toolbar: Layer & Status Filters */}
-        <div className="pointer-events-auto flex items-center gap-1.5 rounded-xl border border-slate-700/80 bg-[#111827]/90 p-1.5 backdrop-blur-md shadow-lg">
-          <button
-            onClick={() => setActiveFilterStatus('all')}
-            className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
-              activeFilterStatus === 'all'
-                ? 'bg-slate-700 text-white shadow-xs'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            همه ({toPersianDigits(transformers.length)})
-          </button>
-          <button
-            onClick={() => setActiveFilterStatus('critical')}
-            className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-colors ${
-              activeFilterStatus === 'critical'
-                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
-                : 'text-rose-400/70 hover:text-rose-300'
-            }`}
-          >
-            <span className="h-2 w-2 rounded-full bg-rose-500" />
-            بحرانی
-          </button>
-          <button
-            onClick={() => setActiveFilterStatus('warning')}
-            className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-colors ${
-              activeFilterStatus === 'warning'
-                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                : 'text-amber-400/70 hover:text-amber-300'
-            }`}
-          >
-            <span className="h-2 w-2 rounded-full bg-amber-500" />
-            هشدار
-          </button>
-          <button
-            onClick={() => setActiveFilterStatus('normal')}
-            className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-colors ${
-              activeFilterStatus === 'normal'
-                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                : 'text-emerald-400/70 hover:text-emerald-300'
-            }`}
-          >
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            مطلوب
-          </button>
+    <div className="relative h-full min-h-[560px] w-full overflow-hidden rounded-3xl border border-[#1e2230] bg-[#090a0f]">
+      <div ref={mapContainerRef} className="w-full h-full z-0" />
+
+      {caption && (
+        <div className="pointer-events-none absolute right-3 top-3 z-[400] rounded-full border border-[#1e2230] bg-[#090a0f]/80 px-3 py-1 text-[11px] text-slate-300 backdrop-blur-md">
+          <span className="ml-2 font-mono text-[10px] tracking-widest text-emerald-400">GIS</span>
+          {caption}
         </div>
+      )}
 
-        {/* Right Toolbar: Map Themes and Overlays */}
-        <div className="pointer-events-auto flex items-center gap-1.5 rounded-xl border border-slate-700/80 bg-[#111827]/90 p-1.5 backdrop-blur-md shadow-lg">
-          
-          {/* Substation Toggle */}
-          <button
-            onClick={() => setShowSubstations(!showSubstations)}
-            title="نمایش/عدم نمایش پست‌های ۶۳ کیلوولت"
-            className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors ${
-              showSubstations
-                ? 'bg-sky-500/20 text-sky-400 border border-sky-500/40'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
+      {showFeeders && feederStatus === 'loading' && (
+        <div className="absolute bottom-4 left-4 z-[400] rounded-full border border-[#1e2230] bg-[#090a0f]/85 px-3 py-1.5 text-[11px] text-slate-300">
+          در حال بارگذاری خطوط فیدر...
+        </div>
+      )}
+      {showFeeders && feederStatus === 'error' && (
+        <div className="absolute bottom-4 left-4 z-[400] max-w-xs rounded-full border border-rose-400/30 bg-[#090a0f]/90 px-3 py-1.5 text-[11px] text-rose-300">
+          {feederError}
+        </div>
+      )}
+      {feederStatus === 'ready' && showFeeders && (feederNetwork?.features?.length ?? 0) === 0 && (
+        <div className="absolute bottom-4 left-4 z-[400] rounded-full border border-[#1e2230] bg-[#090a0f]/85 px-3 py-1.5 text-[11px] text-slate-300">
+          خطی برای این امور در شبکه فیدر ثبت نشده است.
+        </div>
+      )}
+      {activeFeederName && (
+        <button
+          type="button"
+          onClick={() => setActiveFeederKey(null)}
+          className="absolute bottom-4 right-3 z-[400] max-w-[70%] truncate rounded-full border border-cyan-400/30 bg-[#090a0f]/90 px-3 py-1.5 text-[11px] text-cyan-200"
+        >
+          {activeFeederName} · برداشتن درخشش
+        </button>
+      )}
+
+      <div className="absolute inset-x-3 top-3 z-[400] flex flex-col items-start gap-1.5">
+        <div className="flex max-w-full flex-wrap items-center gap-0.5 rounded-2xl border border-[#1e2230] bg-[#090a0f]/88 p-1 shadow-lg backdrop-blur-md">
+          <MapChip active={filterStatus === 'all'} onClick={() => setFilterStatus('all')}>همه {transformers.length}</MapChip>
+          <MapChip active={filterStatus === 'critical'} tone="rose" onClick={() => setFilterStatus('critical')}>بحرانی</MapChip>
+          <MapChip active={filterStatus === 'warning'} tone="amber" onClick={() => setFilterStatus('warning')}>هشدار</MapChip>
+          <MapChip active={filterStatus === 'healthy'} tone="emerald" onClick={() => setFilterStatus('healthy')}>مطلوب</MapChip>
+        </div>
+        <div className="flex max-w-full flex-wrap items-center gap-0.5 rounded-2xl border border-[#1e2230] bg-[#090a0f]/88 p-1 shadow-lg backdrop-blur-md">
+          <MapChip active={showSubstations} onClick={() => setShowSubstations(!showSubstations)}>
+            <Zap size={12} strokeWidth={1.75} /> پست
+          </MapChip>
+          <MapChip
+            active={showFeeders}
+            onClick={() => {
+              setShowFeeders((current) => {
+                if (current) setActiveFeederKey(null);
+                return !current;
+              });
+            }}
           >
-            <span className="text-[10px]">⚡</span>
-            <span>پست‌ها</span>
-          </button>
-
-          {/* Feeder Lines Toggle */}
-          <button
-            onClick={() => setShowFeeders(!showFeeders)}
-            title="نمایش خطوط فیدرهای ۲۰ کیلوولت"
-            className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors ${
-              showFeeders
-                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Activity className="h-3 w-3" />
-            <span>فیدرها</span>
-          </button>
-
-          <div className="h-4 w-px bg-slate-700 mx-0.5" />
-
-          {/* Map Layer Switcher */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setMapTheme('dark')}
-              className={`rounded-lg px-2 py-1 text-xs font-medium transition-colors ${
-                mapTheme === 'dark' ? 'bg-slate-700 text-cyan-300' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              تاریک
-            </button>
-            <button
-              onClick={() => setMapTheme('satellite')}
-              className={`rounded-lg px-2 py-1 text-xs font-medium transition-colors ${
-                mapTheme === 'satellite' ? 'bg-slate-700 text-cyan-300' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              ماهواره
-            </button>
-            <button
-              onClick={() => setMapTheme('streets')}
-              className={`rounded-lg px-2 py-1 text-xs font-medium transition-colors ${
-                mapTheme === 'streets' ? 'bg-slate-700 text-cyan-300' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              معابر
-            </button>
-          </div>
+            <Layers size={12} strokeWidth={1.75} /> فیدر
+          </MapChip>
+          <span className="mx-0.5 h-3 w-px bg-[#1e2230]" />
+          <MapChip active={mapTheme === 'dark'} onClick={() => setMapTheme('dark')}>تاریک</MapChip>
+          <MapChip active={mapTheme === 'satellite'} onClick={() => setMapTheme('satellite')}>ماهواره</MapChip>
+          <MapChip active={mapTheme === 'streets'} onClick={() => setMapTheme('streets')}>معابر</MapChip>
         </div>
       </div>
-
-      {/* Map Zoom & Compass Tools */}
-      <div className="absolute bottom-4 left-4 z-[1000] flex flex-col gap-1.5 pointer-events-auto">
-        <button
-          onClick={handleZoomIn}
-          aria-label="بزرگ‌نمایی نقشه"
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-[#111827]/90 text-slate-200 shadow-md hover:bg-slate-800"
-        >
-          <ZoomIn className="h-4 w-4" />
-        </button>
-        <button
-          onClick={handleZoomOut}
-          aria-label="کوچک‌نمایی نقشه"
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-[#111827]/90 text-slate-200 shadow-md hover:bg-slate-800"
-        >
-          <ZoomOut className="h-4 w-4" />
-        </button>
-        <button
-          onClick={handleResetView}
-          aria-label="بازنشانی موقعیت به مرکز استان قزوین"
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-[#111827]/90 text-slate-200 shadow-md hover:bg-slate-800"
-          title="مرکز استان قزوین"
-        >
-          <Compass className="h-4 w-4 text-emerald-400" />
-        </button>
-      </div>
-
-      {/* Map Legend (Bottom Right) */}
-      <div className="absolute bottom-4 right-4 z-[1000] hidden rounded-xl border border-slate-700/80 bg-[#111827]/90 p-2.5 text-right text-xs shadow-lg backdrop-blur-md sm:block">
-        <div className="mb-1.5 text-[11px] font-bold text-slate-300">راهنمای علائم GIS</div>
-        <div className="space-y-1 text-[11px] text-slate-400">
-          <div className="flex items-center gap-2">
-            <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-emerald-400 bg-emerald-500/20 text-[8px] font-bold text-emerald-400">HI</span>
-            <span>شاخص سلامت مطلوب (HI &ge; ۸۰)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-amber-400 bg-amber-500/20 text-[8px] font-bold text-amber-400">HI</span>
-            <span>نیازمند پایش و هشدار (۵۰ &le; HI &lt; ۸۰)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-rose-400 bg-rose-500/20 text-[8px] font-bold text-rose-400">HI</span>
-            <span>بحرانی / اضافه بار شدید (HI &lt; ۵۰)</span>
-          </div>
-          <div className="flex items-center gap-2 pt-1 border-t border-slate-800">
-            <span className="flex h-3.5 w-3.5 items-center justify-center rounded bg-sky-600 text-[10px] font-bold text-white">⚡</span>
-            <span>پست فوق توزیع ۶۳/۲۰ کیلوولت</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Actual Map Container */}
-      <div ref={mapContainerRef} className="h-full w-full" />
     </div>
   );
 };
+
+function ignorePointer(line: L.Polyline) {
+  const element = line.getElement();
+  if (element) element.style.pointerEvents = 'none';
+  return line;
+}
+
+function feederFeatureKey(feature: FeederNetworkFeature, index: number) {
+  const id = feature.properties?.feeder_id ?? feature.id;
+  return id != null && id !== '' ? String(id) : `line-${index}`;
+}
+
+function softenFeederColor(stroke: unknown) {
+  if (stroke === '#0000ff' || stroke === '#00f' || stroke === 'blue') return '#22d3ee';
+  if (stroke === '#ff0000' || stroke === '#f00' || stroke === 'red') return '#fb7185';
+  return typeof stroke === 'string' && stroke ? stroke : '#22d3ee';
+}
+
+function MapChip({
+  active,
+  tone = 'cyan',
+  onClick,
+  children,
+}: {
+  active: boolean;
+  tone?: 'cyan' | 'rose' | 'amber' | 'emerald';
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  const activeTone = {
+    cyan: 'border-cyan-300/30 bg-cyan-400/15 text-cyan-100 shadow-[0_0_16px_rgba(34,211,238,0.2)]',
+    rose: 'border-rose-300/30 bg-rose-400/15 text-rose-100',
+    amber: 'border-amber-300/30 bg-amber-400/15 text-amber-100',
+    emerald: 'border-emerald-300/30 bg-emerald-400/15 text-emerald-100',
+  }[tone];
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all duration-300 ${
+        active ? activeTone : 'border-transparent text-slate-500 hover:bg-white/5 hover:text-slate-200'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}

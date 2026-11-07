@@ -84,55 +84,31 @@ test('calculateHealthIndex produces coherent status (normal, warning, critical)'
     serialNumber: 'IT-98214-400',
     name: 'ترانس زمینی شهید بابایی ۱',
     regionId: 'reg-north-qazvin',
-    substationId: 'sub-minoodar',
-    feederId: 'fdr-babaee',
-    type: 'ground',
+    region: 'امور شمال قزوین',
+    substationName: 'پست مینودر',
+    feederName: 'فیدر بابایی',
     capacityKva: 400,
-    installationYear: 2018,
-    manufacturer: 'ایران ترانسفو',
-    coordinates: [36.295, 50.012],
-    locationName: 'بلوار شهید بابایی، کوچه ۲۴',
-    currentLoadKw: 240,
+    installYear: 2018,
+    lat: 36.295,
+    lng: 50.012,
     currentLoadPercent: 60,
-    peakLoadPercent24h: 75,
-    oilTemperatureC: 58,
-    ambientTemperatureC: 28,
-    phaseCurrents: { r: 345, s: 350, t: 342 },
-    phaseVoltages: { r: 231, s: 230, t: 229 },
-    powerFactor: 0.94,
-    thdCurrentPercent: 2.8,
-    dga: {
+    healthIndex: 92,
+    failureRisk30d: 8,
+    overloadCount: 0,
+    lastMaintenanceDate: '۱۴۰۳/۰۸/۱۵',
+    dgaGases: {
       h2: 15,
       ch4: 8,
       c2h2: 0,
       c2h4: 12,
-      c2h6: 6,
       co: 180,
-      co2: 1400,
-    },
-    oil: {
-      breakdownVoltageKv: 52,
-      waterContentPpm: 14,
-      acidityMgKohPerG: 0.04,
-      interfacialTension: 36,
-    },
-    overloadCount30d: 0,
-    consecutiveOverloadHours: 0,
-    lastMaintenanceDate: '۱۴۰۳/۰۸/۱۵',
-    lastOilTestDate: '۱۴۰۳/۰۹/۱۰',
-    customers: {
-      residential: 185,
-      commercial: 24,
-      industrial: 0,
-      agricultural: 0,
-      public: 4,
     },
   };
 
-  const res = calculateHealthIndex(healthyTransformer, 2026);
+  const res = calculateHealthIndex(healthyTransformer);
   assert.ok(res.healthIndex >= 85);
-  assert.equal(res.status, 'normal');
+  assert.equal(res.status, 'healthy');
 
-  const risk = calculateFailureRisk(res.healthIndex, healthyTransformer.currentLoadPercent, healthyTransformer.overloadCount30d);
-  assert.ok(risk.risk30Days < 20);
+  const risk = calculateFailureRisk(res.healthIndex, healthyTransformer.currentLoadPercent);
+  assert.ok(risk < 20);
 });

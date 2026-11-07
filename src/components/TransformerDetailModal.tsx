@@ -1,612 +1,628 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import React, { useState } from 'react';
-import { 
-  X, 
-  Zap, 
-  Activity, 
-  AlertTriangle, 
-  Calendar, 
-  Users, 
-  Thermometer, 
-  ShieldAlert, 
-  Gauge, 
-  Wrench, 
-  FileText, 
-  CheckCircle2,
-  TrendingUp,
-  MapPin,
-  Clock,
-  Sparkles
+﻿import React, { useEffect, useState } from 'react';
+import {
+  X, Activity, Droplets, Zap, Wrench, Thermometer, Gauge, AlertTriangle, CheckCircle2, Loader2,
 } from 'lucide-react';
-import { TransformerData, calculateHealthIndex, calculateFailureRisk, toPersianDigits, formatPersianNumber } from '../utils/healthIndex';
+import {
+  Area, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis,
+} from 'recharts';
+import { TransformerData, calculateHealthIndex, toPersianDigits } from '../utils/healthIndex';
+import { ApiError, transbanApi } from '../services/api';
+import type { DgaTestCreate, DgaTestRecord, TelemetryPoint } from '../services/types';
+import { mapDgaHistory } from '../services/mappers';
 
-interface TransformerDetailModalProps {
+interface Props {
+  isOpen?: boolean;
   transformer: TransformerData | null;
   onClose: () => void;
-  onRegisterWorkOrder?: (transformerId: string, desc: string) => void;
+  onRegisterWorkOrder: (id: string, desc: string) => void;
 }
 
-export const TransformerDetailModal: React.FC<TransformerDetailModalProps> = ({
-  transformer,
-  onClose,
-  onRegisterWorkOrder,
-}) => {
-  if (!transformer) return null;
+const emptyDgaForm = {
+  test_date: '',
+  c2h2: '',
+  c2h4: '',
+  h2: '',
+  ch4: '',
+  co: '',
+  breakdown_voltage_kv: '',
+};
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'dga' | 'telemetry' | 'customers' | 'pm'>('overview');
-  const [showWorkOrderSuccess, setShowWorkOrderSuccess] = useState(false);
+const emptyWorkOrder = {
+  issue_type: '',
+  assigned_team: '',
+  priority: 'فوری',
+  description: '',
+};
 
-  const { healthIndex, status, dgaScore, oilScore, loadingScore, ageScore } = calculateHealthIndex(transformer);
-  const { risk30Days, risk90Days, riskLevelText } = calculateFailureRisk(healthIndex, transformer.currentLoadPercent, transformer.overloadCount30d);
+function isAbort(err: unknown) {
+  return err instanceof DOMException && err.name === 'AbortError';
+}
 
-  const handleCreateWorkOrder = () => {
-    if (onRegisterWorkOrder) {
-      onRegisterWorkOrder(transformer.id, `دستور کار اضطراری نت - ترانس ${transformer.name}`);
+function errorText(err: unknown, fallback: string) {
+  if (err instanceof ApiError && err.message) return err.message;
+  return fallback;
+}
+
+function axisTime(timestamp: string) {
+  const clock = timestamp.match(/\d{1,2}:\d{2}/);
+  return toPersianDigits(clock ? clock[0] : timestamp);
+}
+
+export function TransformerDetailModal({ isOpen = true, transformer, onClose, onRegisterWorkOrder }: Props) {
+  const [activeTab, setActiveTab] = useState('summary');
+  const [loadPoints, setLoadPoints] = useState<TelemetryPoint[]>([]);
+  const [loadStatus, setLoadStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [loadError, setLoadError] = useState('');
+  const [dgaHistory, setDgaHistory] = useState<DgaTestRecord[]>([]);
+  const [dgaStatus, setDgaStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [dgaError, setDgaError] = useState('');
+  const [dgaForm, setDgaForm] = useState(emptyDgaForm);
+  const [dgaSaving, setDgaSaving] = useState(false);
+  const [dgaNotice, setDgaNotice] = useState('');
+  const [workOrderOpen, setWorkOrderOpen] = useState(false);
+  const [workOrder, setWorkOrder] = useState(emptyWorkOrder);
+  const [workSaving, setWorkSaving] = useState(false);
+  const [workNotice, setWorkNotice] = useState('');
+
+  const transformerId = transformer?.id;
+
+  useEffect(() => {
+    if (!isOpen || !transformerId) return;
+    const controller = new AbortController();
+    setLoadStatus('loading');
+    setDgaStatus('loading');
+    setLoadError('');
+    setDgaError('');
+    setDgaNotice('');
+    setWorkNotice('');
+
+    const load = async () => {
+      try {
+        const history = await transbanApi.getTransformerLoadHistory(transformerId, 24, controller.signal);
+        if (controller.signal.aborted) return;
+        setLoadPoints(history?.data ?? []);
+        setLoadStatus('ready');
+      } catch (err) {
+        if (controller.signal.aborted || isAbort(err)) return;
+        setLoadPoints([]);
+        setLoadStatus('error');
+        setLoadError(errorText(err, 'نمودار ۲۴ ساعته از سرور دریافت نشد'));
+      }
+
+      try {
+        const history = await transbanApi.getDgaHistory(transformerId, controller.signal);
+        if (controller.signal.aborted) return;
+        setDgaHistory(mapDgaHistory(history));
+        setDgaStatus('ready');
+      } catch (err) {
+        if (controller.signal.aborted || isAbort(err)) return;
+        setDgaHistory([]);
+        setDgaStatus('error');
+        setDgaError(errorText(err, 'تاریخچه آزمون روغن از سرور دریافت نشد'));
+      }
+    };
+
+    void load();
+    return () => controller.abort();
+  }, [isOpen, transformerId]);
+
+  if (!isOpen || !transformer) return null;
+
+  const { status, healthIndex } = calculateHealthIndex(transformer);
+  const currentYear = 1403;
+  const installYear = Number(transformer.installYear) || 1395;
+  const age = Math.max(0, currentYear - installYear);
+  const dga = transformer.dgaGases;
+  const tel = transformer.telemetry;
+  const latestDga = dgaHistory[dgaHistory.length - 1];
+
+  const statusColors = {
+    healthy: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    warning: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    critical: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
+  };
+  const statusLabels = { healthy: 'مطلوب', warning: 'هشدار', critical: 'بحرانی' };
+
+  const loadChart = loadPoints.map((point) => ({
+    time: axisTime(point.timestamp),
+    loadKw: point.load_kw,
+    currentAmps: point.current_amps,
+    oilC: point.oil_temperature_c,
+  }));
+
+  const dgaChart = dgaHistory.map((row, index) => ({
+    label: toPersianDigits(row.test_date || String(index + 1)),
+    c2h2: row.c2h2,
+    c2h4: row.c2h4,
+    h2: row.h2,
+    ch4: row.ch4,
+    co: row.co,
+    breakdown: row.breakdown_voltage_kv,
+  }));
+
+  const gasCards = [
+    { label: 'استیلن (C2H2)', value: latestDga?.c2h2 ?? dga?.c2h2, limit: 2 },
+    { label: 'اتیلن (C2H4)', value: latestDga?.c2h4 ?? dga?.c2h4, limit: 50 },
+    { label: 'هیدروژن (H2)', value: latestDga?.h2 ?? dga?.h2, limit: 100 },
+    { label: 'متان (CH4)', value: latestDga?.ch4 ?? dga?.ch4, limit: 120 },
+    { label: 'مونوکسید (CO)', value: latestDga?.co ?? dga?.co, limit: 350 },
+  ];
+
+  const handleBackdropClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget) onClose();
+  };
+
+  const refreshDga = async () => {
+    const history = await transbanApi.getDgaHistory(transformer.id);
+    setDgaHistory(mapDgaHistory(history));
+    setDgaStatus('ready');
+    setDgaError('');
+  };
+
+  const submitDga = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const body: DgaTestCreate = {
+      test_date: dgaForm.test_date.trim(),
+      c2h2: Number(dgaForm.c2h2),
+      c2h4: Number(dgaForm.c2h4),
+      h2: Number(dgaForm.h2),
+      ch4: Number(dgaForm.ch4),
+      co: Number(dgaForm.co),
+      breakdown_voltage_kv: Number(dgaForm.breakdown_voltage_kv),
+    };
+    const numbers = [body.c2h2, body.c2h4, body.h2, body.ch4, body.co, body.breakdown_voltage_kv];
+    if (!body.test_date || numbers.some((value) => !Number.isFinite(value))) {
+      setDgaNotice('تاریخ آزمون، هر پنج گاز و ولتاژ شکست را کامل وارد کنید');
+      return;
     }
-    setShowWorkOrderSuccess(true);
-    setTimeout(() => setShowWorkOrderSuccess(false), 3000);
+
+    setDgaSaving(true);
+    setDgaNotice('');
+    try {
+      await transbanApi.createDgaTest(transformer.id, body);
+      setDgaForm(emptyDgaForm);
+      setDgaNotice('آزمون روغن ثبت شد');
+      await refreshDga();
+    } catch (err) {
+      setDgaNotice(errorText(err, 'ثبت آزمون روغن انجام نشد'));
+    } finally {
+      setDgaSaving(false);
+    }
+  };
+
+  const submitWorkOrder = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const transformerNumericId = Number(transformer.id);
+    if (!workOrder.issue_type.trim() || !workOrder.assigned_team.trim()) {
+      setWorkNotice('نوع عیب و اکیپ تعمیرات را وارد کنید');
+      return;
+    }
+    if (!Number.isInteger(transformerNumericId)) {
+      setWorkNotice('شناسه این ترانس عددی نیست و دستور کار به سرور ارسال نمی‌شود');
+      return;
+    }
+
+    setWorkSaving(true);
+    setWorkNotice('');
+    try {
+      await transbanApi.createWorkOrder({
+        transformer_id: transformerNumericId,
+        issue_type: workOrder.issue_type.trim(),
+        assigned_team: workOrder.assigned_team.trim(),
+        priority: workOrder.priority,
+        description: workOrder.description.trim() || null,
+      });
+      onRegisterWorkOrder(transformer.id, workOrder.description.trim() || workOrder.issue_type.trim());
+      setWorkOrder(emptyWorkOrder);
+      setWorkNotice('دستور کار اضطراری ثبت شد');
+    } catch (err) {
+      setWorkNotice(errorText(err, 'صدور دستور کار انجام نشد'));
+    } finally {
+      setWorkSaving(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs transition-opacity animate-fade-in">
-      
-      {/* Modal Dialog Box */}
-      <div className="relative flex max-h-[92vh] w-full max-w-4xl flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-[#111827] overflow-hidden text-right">
-        
-        {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800">
-          <div className="flex items-center gap-3">
-            <div
-              className={`flex h-11 w-11 items-center justify-center rounded-xl font-bold ${
-                status === 'critical'
-                  ? 'bg-rose-500/15 text-rose-500 border border-rose-500/30'
-                  : status === 'warning'
-                  ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
-                  : 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30'
-              }`}
-            >
-              <Zap className="h-6 w-6" />
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/85 backdrop-blur-sm p-4"
+      onClick={handleBackdropClick}
+      dir="rtl"
+    >
+      <div className="flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-[#1e2230] bg-[#11131a]">
+        <div className="flex items-center justify-between p-5 border-b border-slate-800 bg-slate-900/80">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+              <Zap size={24} />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-slate-900 dark:text-white md:text-lg">
-                  {transformer.name}
-                </h2>
-                <span
-                  className={`rounded-md px-2 py-0.5 text-xs font-bold ${
-                    status === 'critical'
-                      ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
-                      : status === 'warning'
-                      ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                      : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                  }`}
-                >
-                  {status === 'critical' ? 'بحرانی' : status === 'warning' ? 'نیازمند پایش' : 'مطلوب'}
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-bold text-slate-100">{transformer.name}</h2>
+                <span className={`px-2.5 py-0.5 rounded text-xs font-bold border ${statusColors[status]}`}>
+                  {statusLabels[status]}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-                <span className="font-mono">سریال: {transformer.serialNumber}</span>
+              <div className="flex items-center gap-3 text-xs text-slate-400 mt-1.5">
+                <span>سریال: <span className="font-mono text-slate-300">{toPersianDigits(transformer.serialNumber)}</span></span>
                 <span>•</span>
-                <span>ظرفیت: {toPersianDigits(transformer.capacityKva)} kVA</span>
+                <span>ظرفیت: <span className="font-mono text-slate-300">{toPersianDigits(transformer.capacityKva)} kVA</span></span>
                 <span>•</span>
-                <span>نوع: {transformer.type === 'ground' ? 'پست زمینی' : 'پایه هوایی'}</span>
+                <span>منطقه: {transformer.region || '—'}</span>
               </div>
             </div>
           </div>
-
           <button
+            type="button"
             onClick={onClose}
-            aria-label="بستن پنجره جزئیات"
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="p-2 bg-slate-800/80 hover:bg-rose-500 hover:text-white text-slate-400 rounded-xl transition-all cursor-pointer border border-slate-700 hover:border-rose-500"
           >
-            <X className="h-5 w-5" />
+            <X size={20} />
           </button>
         </div>
 
-        {/* Modal Navigation Tabs */}
-        <div className="flex items-center gap-2 border-b border-slate-200 px-6 pt-2 overflow-x-auto dark:border-slate-800">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`flex items-center gap-1.5 border-b-2 py-2.5 px-3 text-xs font-bold transition-colors whitespace-nowrap ${
-              activeTab === 'overview'
-                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
-          >
-            <Activity className="h-4 w-4" />
-            <span>خلاصه وضعیت و پیش‌بینی خرابی</span>
+        <div className="flex items-center gap-6 px-6 border-b border-slate-800 bg-slate-900/40">
+          <button type="button" onClick={() => setActiveTab('summary')} className={`flex items-center gap-2 py-4 text-sm font-bold border-b-2 transition-colors ${activeTab === 'summary' ? 'border-cyan-500 text-cyan-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>
+            <Activity size={16} /> خلاصه وضعیت و پیش‌بینی
           </button>
-
-          <button
-            onClick={() => setActiveTab('dga')}
-            className={`flex items-center gap-1.5 border-b-2 py-2.5 px-3 text-xs font-bold transition-colors whitespace-nowrap ${
-              activeTab === 'dga'
-                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
-          >
-            <ShieldAlert className="h-4 w-4" />
-            <span>آنالیز گازهای محلول (DGA) و روغن</span>
+          <button type="button" onClick={() => setActiveTab('dga')} className={`flex items-center gap-2 py-4 text-sm font-bold border-b-2 transition-colors ${activeTab === 'dga' ? 'border-amber-500 text-amber-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>
+            <Droplets size={16} /> آنالیز گازهای محلول (DGA)
           </button>
-
-          <button
-            onClick={() => setActiveTab('telemetry')}
-            className={`flex items-center gap-1.5 border-b-2 py-2.5 px-3 text-xs font-bold transition-colors whitespace-nowrap ${
-              activeTab === 'telemetry'
-                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
-          >
-            <Gauge className="h-4 w-4" />
-            <span>تله‌متری زنده فهام و مقادیر الکتریکی</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('customers')}
-            className={`flex items-center gap-1.5 border-b-2 py-2.5 px-3 text-xs font-bold transition-colors whitespace-nowrap ${
-              activeTab === 'customers'
-                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
-          >
-            <Users className="h-4 w-4" />
-            <span>مشترکین و تعرفه‌ها</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('pm')}
-            className={`flex items-center gap-1.5 border-b-2 py-2.5 px-3 text-xs font-bold transition-colors whitespace-nowrap ${
-              activeTab === 'pm'
-                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
-          >
-            <Wrench className="h-4 w-4" />
-            <span>تاریخچه نت و دستور کارها</span>
+          <button type="button" onClick={() => setActiveTab('telemetry')} className={`flex items-center gap-2 py-4 text-sm font-bold border-b-2 transition-colors ${activeTab === 'telemetry' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>
+            <Gauge size={16} /> تله‌متری زنده فهام
           </button>
         </div>
 
-        {/* Modal Body Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
-          
-          {showWorkOrderSuccess && (
-            <div className="flex items-center gap-2 rounded-xl bg-emerald-500/15 p-3 text-xs text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 animate-fade-in">
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-              <span>دستور کار اضطراری نت با شماره پیگیری PM-{Math.floor(100000 + Math.random() * 900000)} در سیستم ثبت و به نزدیک‌ترین اکیپ ارجاع شد.</span>
-            </div>
-          )}
-
-          {/* TAB 1: OVERVIEW */}
-          {activeTab === 'overview' && (
-            <div className="space-y-5">
-              
-              {/* Predictive Risk & Health Index Banner */}
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                
-                {/* Health Index Card */}
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
-                  <div className="text-xs text-slate-500 dark:text-slate-400">شاخص سلامت ترانسفورماتور (HI)</div>
-                  <div className="mt-2 flex items-baseline gap-2">
-                    <span className="font-mono text-3xl font-black text-slate-900 dark:text-white">
-                      {toPersianDigits(healthIndex)}
-                    </span>
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {activeTab === 'summary' && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5 shadow-inner">
+                  <div className="flex justify-between items-start mb-4">
+                    <span className="text-sm font-bold text-slate-300">شاخص سلامت (HI)</span>
                     <span className="text-xs text-slate-500">از ۱۰۰</span>
                   </div>
-                  <div className="mt-2 h-2 w-full rounded-full bg-slate-200 overflow-hidden dark:bg-slate-800">
-                    <div
-                      className={`h-full rounded-full ${
-                        healthIndex >= 80 ? 'bg-emerald-500' : healthIndex >= 50 ? 'bg-amber-500' : 'bg-rose-500'
-                      }`}
-                      style={{ width: `${healthIndex}%` }}
-                    />
+                  <div className="text-4xl font-bold text-white mb-3 font-mono">{toPersianDigits(healthIndex)}</div>
+                  <div className="w-full bg-slate-700/50 rounded-full h-1.5 mb-2 overflow-hidden">
+                    <div className={`h-1.5 rounded-full ${status === 'healthy' ? 'bg-emerald-500' : status === 'warning' ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${healthIndex}%` }} />
                   </div>
-                  <div className="mt-2 text-[11px] text-slate-500">
-                    وضعیت فنی کلی: {healthIndex >= 80 ? 'عالی و استاندارد' : healthIndex >= 50 ? 'نیازمند مراقبت دوره‌ای' : 'بحرانی - نیازمند تعویض یا اورهال'}
-                  </div>
+                  <div className="text-xs text-slate-400">وضعیت فنی کلی: <span className="font-bold">{statusLabels[status]}</span></div>
                 </div>
-
-                {/* 30-Day Failure Risk */}
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
-                  <div className="text-xs text-slate-500 dark:text-slate-400">احتمال خرابی در ۳۰ روز آینده</div>
-                  <div className="mt-2 flex items-baseline gap-2">
-                    <span className={`font-mono text-3xl font-black ${risk30Days > 50 ? 'text-rose-500' : 'text-slate-900 dark:text-white'}`}>
-                      {toPersianDigits(risk30Days)}٪
-                    </span>
-                    <span className="text-xs text-slate-500">سطح: {riskLevelText}</span>
+                <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5 shadow-inner">
+                  <div className="flex justify-between items-start mb-4">
+                    <span className="text-sm font-bold text-slate-300">احتمال خرابی ۳۰ روزه</span>
+                    <span className="text-xs text-slate-500">هوش مصنوعی</span>
                   </div>
-                  <div className="mt-2 h-2 w-full rounded-full bg-slate-200 overflow-hidden dark:bg-slate-800">
-                    <div
-                      className={`h-full rounded-full ${
-                        risk30Days > 50 ? 'bg-rose-500' : risk30Days > 25 ? 'bg-amber-500' : 'bg-emerald-500'
-                      }`}
-                      style={{ width: `${risk30Days}%` }}
-                    />
+                  <div className="text-4xl font-bold text-amber-400 mb-3 font-mono">
+                    {toPersianDigits(transformer.failureRisk30d)}<span className="text-xl">%</span>
                   </div>
-                  <div className="mt-2 text-[11px] text-slate-500">
-                    احتمال خرابی در ۹۰ روز: <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{toPersianDigits(risk90Days)}٪</span>
+                  <div className="w-full bg-slate-700/50 rounded-full h-1.5 mb-2 overflow-hidden">
+                    <div className="h-1.5 rounded-full bg-amber-400" style={{ width: `${transformer.failureRisk30d}%` }} />
                   </div>
+                  <div className="text-xs text-slate-400">احتمال خرابی در ۹۰ روز: {toPersianDigits(Math.min(99, transformer.failureRisk30d * 1.5))}%</div>
                 </div>
-
-                {/* Loading Status */}
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
-                  <div className="text-xs text-slate-500 dark:text-slate-400">بار لحظه‌ای فهام</div>
-                  <div className="mt-2 flex items-baseline gap-2">
-                    <span className={`font-mono text-3xl font-black ${transformer.currentLoadPercent > 100 ? 'text-rose-500' : 'text-cyan-500'}`}>
-                      {toPersianDigits(transformer.currentLoadPercent)}٪
-                    </span>
-                    <span className="text-xs text-slate-500">({toPersianDigits(transformer.currentLoadKw)} kW)</span>
+                <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5 shadow-inner">
+                  <div className="flex justify-between items-start mb-4">
+                    <span className="text-sm font-bold text-slate-300">بار لحظه‌ای ترانس</span>
+                    <span className="text-xs text-slate-500">MDM فهام</span>
                   </div>
-                  <div className="mt-2 h-2 w-full rounded-full bg-slate-200 overflow-hidden dark:bg-slate-800">
-                    <div
-                      className={`h-full rounded-full ${
-                        transformer.currentLoadPercent > 100 ? 'bg-rose-500' : 'bg-cyan-500'
-                      }`}
-                      style={{ width: `${Math.min(100, transformer.currentLoadPercent)}%` }}
-                    />
+                  <div className={`text-4xl font-bold mb-3 font-mono ${transformer.currentLoadPercent > 100 ? 'text-rose-400' : 'text-cyan-400'}`}>
+                    {toPersianDigits(transformer.currentLoadPercent)}<span className="text-xl">%</span>
                   </div>
-                  <div className="mt-2 text-[11px] text-slate-500">
-                    پیک ۲۴ ساعت گذشته: <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{toPersianDigits(transformer.peakLoadPercent24h)}٪</span>
+                  <div className="w-full bg-slate-700/50 rounded-full h-1.5 mb-2 overflow-hidden">
+                    <div className={`h-1.5 rounded-full ${transformer.currentLoadPercent > 100 ? 'bg-rose-500' : 'bg-cyan-500'}`} style={{ width: `${Math.min(100, transformer.currentLoadPercent)}%` }} />
                   </div>
-                </div>
-
-              </div>
-
-              {/* Sub-Indices Breakdown Grid */}
-              <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800 dark:bg-slate-900/30">
-                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-3">
-                  امتیاز عوامل چهارگانه شاخص سلامت (Weights & Scores)
-                </h4>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <div className="rounded-xl border border-slate-200/80 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
-                    <span className="text-[11px] text-slate-500">آنالیز گازها (DGA - ۴۰٪)</span>
-                    <div className="mt-1 font-mono text-lg font-bold text-slate-800 dark:text-slate-100">
-                      {toPersianDigits(dgaScore)} / ۱۰۰
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-slate-200/80 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
-                    <span className="text-[11px] text-slate-500">کیفیت روغن عایق (۲۵٪)</span>
-                    <div className="mt-1 font-mono text-lg font-bold text-slate-800 dark:text-slate-100">
-                      {toPersianDigits(oilScore)} / ۱۰۰
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-slate-200/80 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
-                    <span className="text-[11px] text-slate-500">سابقه اضافه بار و حرارت (۲۰٪)</span>
-                    <div className="mt-1 font-mono text-lg font-bold text-slate-800 dark:text-slate-100">
-                      {toPersianDigits(loadingScore)} / ۱۰۰
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-slate-200/80 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
-                    <span className="text-[11px] text-slate-500">طول عمر مفید ترانس (۱۵٪)</span>
-                    <div className="mt-1 font-mono text-lg font-bold text-slate-800 dark:text-slate-100">
-                      {toPersianDigits(ageScore)} / ۱۰۰
-                    </div>
-                  </div>
+                  <div className="text-xs text-slate-400">پیک ۲۴ ساعت گذشته: {toPersianDigits(Math.round(transformer.currentLoadPercent * 1.1))}%</div>
                 </div>
               </div>
 
-              {/* Equipment Specifications Table */}
-              <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800 dark:bg-slate-900/30">
-                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-3">
-                  شناسنامه فنی و پلاک ترانسفورماتور
-                </h4>
-                <div className="grid grid-cols-2 gap-4 text-xs sm:grid-cols-3">
+              <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5 shadow-inner">
+                <h3 className="text-sm font-bold text-slate-200 mb-4 flex items-center gap-2">
+                  <Wrench size={16} className="text-slate-400" /> شناسنامه فنی و پلاک
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 bg-slate-900/50 p-4 rounded-xl border border-slate-800">
                   <div>
-                    <span className="text-slate-500">کارخانه سازنده:</span>
-                    <div className="font-semibold text-slate-800 dark:text-slate-200">{transformer.manufacturer}</div>
+                    <div className="text-[11px] text-slate-400 mb-1">سال نصب و راه‌اندازی:</div>
+                    <div className="font-bold text-slate-200">{toPersianDigits(installYear)} <span className="text-amber-400/80 text-[11px]">(عمر: {toPersianDigits(age)} سال)</span></div>
                   </div>
                   <div>
-                    <span className="text-slate-500">سال نصب و راه‌اندازی:</span>
-                    <div className="font-semibold text-slate-800 dark:text-slate-200">{toPersianDigits(transformer.installationYear)} (عمر: {toPersianDigits(2026 - transformer.installationYear)} سال)</div>
+                    <div className="text-[11px] text-slate-400 mb-1">نسبت تبدیل ولتاژ:</div>
+                    <div className="font-bold text-cyan-300 font-mono text-left w-max" dir="ltr">20 kV / 400 V</div>
                   </div>
                   <div>
-                    <span className="text-slate-500">نسبت تبدیل ولتاژ:</span>
-                    <div className="font-semibold font-mono text-slate-800 dark:text-slate-200">20 kV / 400 V</div>
+                    <div className="text-[11px] text-slate-400 mb-1">تعداد اضافه بار مکرر:</div>
+                    <div className="font-bold text-slate-200 flex items-center gap-1">
+                      <span className={`text-lg px-1.5 rounded ${transformer.overloadCount > 0 ? 'bg-rose-500/20 text-rose-400' : 'text-emerald-400'}`}>
+                        {transformer.overloadCount === 0 ? 'صفر' : toPersianDigits(transformer.overloadCount)}
+                      </span>
+                      <span className="text-[11px] text-slate-500">مرتبه</span>
+                    </div>
                   </div>
                   <div>
-                    <span className="text-slate-500">موقعیت جغرافیایی GIS:</span>
-                    <div className="font-semibold text-slate-800 dark:text-slate-200">{transformer.locationName}</div>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">تعداد اضافه بار در ۳۰ روز اخیر:</span>
-                    <div className="font-semibold text-slate-800 dark:text-slate-200">{toPersianDigits(transformer.overloadCount30d)} مرتبه</div>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">آخرین پایش وضعیت روغن:</span>
-                    <div className="font-semibold font-mono text-slate-800 dark:text-slate-200">{transformer.lastOilTestDate}</div>
+                    <div className="text-[11px] text-slate-400 mb-1">آخرین پایش روغن (PM):</div>
+                    <div className="font-bold text-slate-200 font-mono">{toPersianDigits(transformer.lastMaintenanceDate)}</div>
                   </div>
                 </div>
               </div>
-
-            </div>
+            </>
           )}
 
-          {/* TAB 2: DGA & OIL CONDITION */}
           {activeTab === 'dga' && (
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800 dark:bg-slate-900/30">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    آنالیز گازهای محلول در روغن (DGA) - واحد ppm
-                  </h4>
-                  <span className="text-[11px] text-slate-500">استاندارد مرجع: IEEE C57.104</span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {/* Acetylene C2H2 */}
-                  <div className={`p-3 rounded-xl border ${transformer.dga.c2h2 > 10 ? 'border-rose-500/40 bg-rose-500/10' : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'}`}>
-                    <div className="text-[11px] text-slate-500">استیلن (C₂H₂) - قوس الکتریکی</div>
-                    <div className="mt-1 font-mono text-xl font-bold text-slate-800 dark:text-slate-100">
-                      {toPersianDigits(transformer.dga.c2h2)} ppm
-                    </div>
-                    <span className="text-[10px] text-slate-400">حد مجاز استاندارد: &lt; ۲ ppm</span>
-                  </div>
-
-                  {/* Ethylene C2H4 */}
-                  <div className={`p-3 rounded-xl border ${transformer.dga.c2h4 > 100 ? 'border-rose-500/40 bg-rose-500/10' : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'}`}>
-                    <div className="text-[11px] text-slate-500">اتیلن (C₂H₄) - گرمای شدید</div>
-                    <div className="mt-1 font-mono text-xl font-bold text-slate-800 dark:text-slate-100">
-                      {toPersianDigits(transformer.dga.c2h4)} ppm
-                    </div>
-                    <span className="text-[10px] text-slate-400">حد مجاز استاندارد: &lt; ۵۰ ppm</span>
-                  </div>
-
-                  {/* Hydrogen H2 */}
-                  <div className={`p-3 rounded-xl border ${transformer.dga.h2 > 200 ? 'border-amber-500/40 bg-amber-500/10' : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'}`}>
-                    <div className="text-[11px] text-slate-500">هیدروژن (H₂) - تخلیه جزئی</div>
-                    <div className="mt-1 font-mono text-xl font-bold text-slate-800 dark:text-slate-100">
-                      {toPersianDigits(transformer.dga.h2)} ppm
-                    </div>
-                    <span className="text-[10px] text-slate-400">حد مجاز استاندارد: &lt; ۱۰۰ ppm</span>
-                  </div>
-
-                  {/* Methane CH4 */}
-                  <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                    <div className="text-[11px] text-slate-500">متان (CH₄) - حرارت کم</div>
-                    <div className="mt-1 font-mono text-xl font-bold text-slate-800 dark:text-slate-100">
-                      {toPersianDigits(transformer.dga.ch4)} ppm
-                    </div>
-                    <span className="text-[10px] text-slate-400">حد مجاز استاندارد: &lt; ۱۲۰ ppm</span>
-                  </div>
-
-                  {/* Carbon Monoxide CO */}
-                  <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                    <div className="text-[11px] text-slate-500">مونوکسید کربن (CO) - تخریب عایق کاغذی</div>
-                    <div className="mt-1 font-mono text-xl font-bold text-slate-800 dark:text-slate-100">
-                      {toPersianDigits(transformer.dga.co)} ppm
-                    </div>
-                    <span className="text-[10px] text-slate-400">حد مجاز استاندارد: &lt; ۵۰۰ ppm</span>
-                  </div>
-
-                  {/* CO2 */}
-                  <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                    <div className="text-[11px] text-slate-500">دی‌اکسید کربن (CO₂)</div>
-                    <div className="mt-1 font-mono text-xl font-bold text-slate-800 dark:text-slate-100">
-                      {toPersianDigits(transformer.dga.co2)} ppm
-                    </div>
-                    <span className="text-[10px] text-slate-400">حد مجاز نسبت CO2/CO: &gt; ۳</span>
-                  </div>
+            <div className="space-y-6">
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3">
+                <AlertTriangle className="text-amber-400 shrink-0" size={20} />
+                <div className="text-sm text-amber-200/80 leading-relaxed">
+                  روند گازهای محلول و ولتاژ شکست از تاریخچهٔ آزمایشگاه روغن خوانده می‌شود. آخرین رکورد در کارت‌ها و کل روند در نمودار و جدول پایین است.
                 </div>
               </div>
 
-              {/* Physical/Chemical Oil Tests */}
-              <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800 dark:bg-slate-900/30">
-                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-3">
-                  ویژگی‌های فیزیکی و شیمیایی روغن عایق
-                </h4>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                    <span className="text-[11px] text-slate-500">ولتاژ شکست دی‌الکتریک:</span>
-                    <div className="font-mono text-base font-bold text-slate-800 dark:text-slate-200">
-                      {toPersianDigits(transformer.oil.breakdownVoltageKv)} kV
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {gasCards.map((gas) => {
+                  const value = Number(gas.value ?? 0);
+                  const color = value > gas.limit * 2 ? 'text-rose-400' : value > gas.limit ? 'text-amber-400' : 'text-emerald-400';
+                  return (
+                    <div key={gas.label} className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4 text-center shadow-sm">
+                      <div className="text-xs text-slate-400 mb-2 font-mono" dir="ltr">{gas.label}</div>
+                      <div className={`text-2xl font-bold font-mono mb-1 ${color}`}>{toPersianDigits(value)}</div>
+                      <div className="text-[10px] text-slate-500">حد مجاز: {toPersianDigits(gas.limit)} ppm</div>
                     </div>
-                    <span className="text-[10px] text-slate-400">حداقل مجاز: ۳۰ kV</span>
-                  </div>
-
-                  <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                    <span className="text-[11px] text-slate-500">میزان رطوبت آب:</span>
-                    <div className="font-mono text-base font-bold text-slate-800 dark:text-slate-200">
-                      {toPersianDigits(transformer.oil.waterContentPpm)} ppm
-                    </div>
-                    <span className="text-[10px] text-slate-400">حداکثر مجاز: ۳۰ ppm</span>
-                  </div>
-
-                  <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                    <span className="text-[11px] text-slate-500">عدد اسیدیته (Acidity):</span>
-                    <div className="font-mono text-base font-bold text-slate-800 dark:text-slate-200">
-                      {toPersianDigits(transformer.oil.acidityMgKohPerG)} mg KOH/g
-                    </div>
-                    <span className="text-[10px] text-slate-400">حداکثر مجاز: ۰٫۱۵</span>
-                  </div>
-
-                  <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                    <span className="text-[11px] text-slate-500">کشش بین سطحی (IFT):</span>
-                    <div className="font-mono text-base font-bold text-slate-800 dark:text-slate-200">
-                      {toPersianDigits(transformer.oil.interfacialTension)} mN/m
-                    </div>
-                    <span className="text-[10px] text-slate-400">مطلوب: &gt; ۲۸</span>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
+
+              {latestDga && (
+                <div className="text-xs text-slate-400">
+                  ولتاژ شکست آخرین آزمون: <span className="font-mono text-sky-300">{toPersianDigits(latestDga.breakdown_voltage_kv)} kV</span>
+                  {latestDga.test_date ? ` · تاریخ ${toPersianDigits(latestDga.test_date)}` : ''}
+                </div>
+              )}
+
+              {dgaStatus === 'loading' && <p className="text-xs text-slate-400">در حال دریافت تاریخچه DGA...</p>}
+              {dgaStatus === 'error' && <p className="text-xs text-rose-300">{dgaError}</p>}
+              {dgaStatus === 'ready' && dgaChart.length === 0 && (
+                <p className="text-xs text-slate-400">برای این ترانس آزمون روغن ثبت نشده است.</p>
+              )}
+
+              {dgaChart.length > 0 && (
+                <div className="h-72 rounded-2xl border border-slate-700/50 bg-slate-900/40 p-3">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={dgaChart} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.35} />
+                      <XAxis dataKey="label" stroke="#94a3b8" fontSize={11} tickLine={false} />
+                      <YAxis yAxisId="ppm" stroke="#94a3b8" fontSize={11} tickLine={false} tickFormatter={(value) => toPersianDigits(value)} />
+                      <YAxis yAxisId="kv" orientation="right" stroke="#38bdf8" fontSize={11} tickLine={false} tickFormatter={(value) => toPersianDigits(value)} />
+                      <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 12, direction: 'rtl' }} />
+                      <Legend />
+                      <Line yAxisId="ppm" type="monotone" dataKey="c2h2" name="C2H2" stroke="#fb7185" dot={false} strokeWidth={2} />
+                      <Line yAxisId="ppm" type="monotone" dataKey="c2h4" name="C2H4" stroke="#fbbf24" dot={false} strokeWidth={2} />
+                      <Line yAxisId="ppm" type="monotone" dataKey="h2" name="H2" stroke="#22d3ee" dot={false} strokeWidth={2} />
+                      <Line yAxisId="ppm" type="monotone" dataKey="ch4" name="CH4" stroke="#34d399" dot={false} strokeWidth={2} />
+                      <Line yAxisId="ppm" type="monotone" dataKey="co" name="CO" stroke="#a78bfa" dot={false} strokeWidth={2} />
+                      <Line yAxisId="kv" type="monotone" dataKey="breakdown" name="ولتاژ شکست kV" stroke="#38bdf8" strokeDasharray="4 4" dot={false} strokeWidth={2} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {dgaHistory.length > 0 && (
+                <div className="overflow-x-auto rounded-xl border border-slate-800">
+                  <table className="w-full text-right text-xs">
+                    <thead className="bg-slate-900/80 text-slate-400">
+                      <tr>
+                        <th className="px-3 py-2">تاریخ</th>
+                        <th className="px-3 py-2">C2H2</th>
+                        <th className="px-3 py-2">C2H4</th>
+                        <th className="px-3 py-2">H2</th>
+                        <th className="px-3 py-2">CH4</th>
+                        <th className="px-3 py-2">CO</th>
+                        <th className="px-3 py-2">ولتاژ شکست</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dgaHistory.map((row, index) => (
+                        <tr key={`${row.test_date}-${index}`} className="border-t border-slate-800 text-slate-200 font-mono">
+                          <td className="px-3 py-2">{toPersianDigits(row.test_date)}</td>
+                          <td className="px-3 py-2">{toPersianDigits(row.c2h2)}</td>
+                          <td className="px-3 py-2">{toPersianDigits(row.c2h4)}</td>
+                          <td className="px-3 py-2">{toPersianDigits(row.h2)}</td>
+                          <td className="px-3 py-2">{toPersianDigits(row.ch4)}</td>
+                          <td className="px-3 py-2">{toPersianDigits(row.co)}</td>
+                          <td className="px-3 py-2">{toPersianDigits(row.breakdown_voltage_kv)} kV</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <form onSubmit={submitDga} className="rounded-2xl border border-slate-700/60 bg-slate-900/50 p-4 space-y-4">
+                <h3 className="text-sm font-bold text-slate-100">ثبت آزمون جدید آزمایشگاه روغن</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <Field label="تاریخ آزمون" value={dgaForm.test_date} onChange={(value) => setDgaForm({ ...dgaForm, test_date: value })} placeholder="1405/08/11" />
+                  <Field label="C2H2" value={dgaForm.c2h2} onChange={(value) => setDgaForm({ ...dgaForm, c2h2: value })} />
+                  <Field label="C2H4" value={dgaForm.c2h4} onChange={(value) => setDgaForm({ ...dgaForm, c2h4: value })} />
+                  <Field label="H2" value={dgaForm.h2} onChange={(value) => setDgaForm({ ...dgaForm, h2: value })} />
+                  <Field label="CH4" value={dgaForm.ch4} onChange={(value) => setDgaForm({ ...dgaForm, ch4: value })} />
+                  <Field label="CO" value={dgaForm.co} onChange={(value) => setDgaForm({ ...dgaForm, co: value })} />
+                  <Field label="ولتاژ شکست (kV)" value={dgaForm.breakdown_voltage_kv} onChange={(value) => setDgaForm({ ...dgaForm, breakdown_voltage_kv: value })} />
+                </div>
+                {dgaNotice && (
+                  <p className={`text-xs ${dgaNotice === 'آزمون روغن ثبت شد' ? 'text-emerald-300' : 'text-rose-300'}`}>{dgaNotice}</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={dgaSaving}
+                  className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950 disabled:opacity-60"
+                >
+                  {dgaSaving && <Loader2 size={16} className="animate-spin" />}
+                  {dgaSaving ? 'در حال ثبت...' : 'ثبت آزمون'}
+                </button>
+              </form>
             </div>
           )}
 
-          {/* TAB 3: TELEMETRY & ELECTRICAL VALUES */}
           {activeTab === 'telemetry' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                {/* 3-Phase Current */}
-                <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800 dark:bg-slate-900/30">
-                  <div className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">جریان فازها (آمپر)</div>
-                  <div className="space-y-2 font-mono text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">فاز R:</span>
-                      <span className="font-bold text-slate-900 dark:text-white">{toPersianDigits(transformer.phaseCurrents.r)} A</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">فاز S:</span>
-                      <span className="font-bold text-slate-900 dark:text-white">{toPersianDigits(transformer.phaseCurrents.s)} A</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">فاز T:</span>
-                      <span className="font-bold text-slate-900 dark:text-white">{toPersianDigits(transformer.phaseCurrents.t)} A</span>
-                    </div>
+            <div className="space-y-6">
+              <div className="rounded-2xl border border-slate-700/50 bg-slate-900/40 p-4">
+                <h3 className="mb-3 text-sm font-bold text-slate-100">بار، جریان و دمای روغن ۲۴ ساعت گذشته</h3>
+                {loadStatus === 'loading' && <p className="text-xs text-slate-400">در حال دریافت تله‌متری...</p>}
+                {loadStatus === 'error' && <p className="text-xs text-rose-300">{loadError}</p>}
+                {loadStatus === 'ready' && loadChart.length === 0 && (
+                  <p className="text-xs text-slate-400">نقطه‌ای برای ۲۴ ساعت گذشته ثبت نشده است.</p>
+                )}
+                {loadChart.length > 0 && (
+                  <div className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={loadChart} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.35} />
+                        <XAxis dataKey="time" stroke="#94a3b8" fontSize={11} tickLine={false} minTickGap={24} />
+                        <YAxis yAxisId="power" stroke="#22d3ee" fontSize={11} tickLine={false} tickFormatter={(value) => toPersianDigits(value)} />
+                        <YAxis yAxisId="temp" orientation="right" stroke="#fb7185" fontSize={11} tickLine={false} tickFormatter={(value) => toPersianDigits(value)} />
+                        <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 12, direction: 'rtl' }} />
+                        <Legend />
+                        <Area yAxisId="power" type="monotone" dataKey="loadKw" name="بار (kW)" stroke="#22d3ee" fill="#22d3ee33" />
+                        <Line yAxisId="power" type="monotone" dataKey="currentAmps" name="جریان (A)" stroke="#34d399" dot={false} strokeWidth={2} />
+                        <Line yAxisId="temp" type="monotone" dataKey="oilC" name="دمای روغن (°C)" stroke="#fb7185" dot={false} strokeWidth={2} />
+                      </ComposedChart>
+                    </ResponsiveContainer>
                   </div>
-                </div>
-
-                {/* 3-Phase Voltage */}
-                <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800 dark:bg-slate-900/30">
-                  <div className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">ولتاژ فازها (ولت)</div>
-                  <div className="space-y-2 font-mono text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">فاز R:</span>
-                      <span className="font-bold text-slate-900 dark:text-white">{toPersianDigits(transformer.phaseVoltages.r)} V</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">فاز S:</span>
-                      <span className="font-bold text-slate-900 dark:text-white">{toPersianDigits(transformer.phaseVoltages.s)} V</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">فاز T:</span>
-                      <span className="font-bold text-slate-900 dark:text-white">{toPersianDigits(transformer.phaseVoltages.t)} V</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quality & Temperatures */}
-                <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800 dark:bg-slate-900/30">
-                  <div className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">شاخص‌های توان و حرارت</div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">دمای روغن بالای ترانس:</span>
-                      <span className={`font-mono font-bold ${transformer.oilTemperatureC > 85 ? 'text-rose-500' : 'text-slate-800 dark:text-slate-200'}`}>
-                        {toPersianDigits(transformer.oilTemperatureC)}°C
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">ضریب توان (Cos &phi;):</span>
-                      <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                        {toPersianDigits(transformer.powerFactor.toFixed(2))}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">اعوجاج هارمونیکی (THD):</span>
-                      <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                        {toPersianDigits(transformer.thdCurrentPercent.toFixed(1))}٪
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
+
+              {tel && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5">
+                    <h3 className="text-sm font-bold text-cyan-400 mb-4 flex items-center gap-2 border-b border-slate-700/50 pb-2">
+                      <Zap size={16} /> ولتاژ فازها (V)
+                    </h3>
+                    <div className="space-y-3 font-mono text-sm">
+                      <PhaseRow label="Phase R" value={tel.voltageR} />
+                      <PhaseRow label="Phase S" value={tel.voltageS} />
+                      <PhaseRow label="Phase T" value={tel.voltageT} />
+                    </div>
+                  </div>
+                  <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5">
+                    <h3 className="text-sm font-bold text-emerald-400 mb-4 flex items-center gap-2 border-b border-slate-700/50 pb-2">
+                      <Activity size={16} /> جریان فازها (A)
+                    </h3>
+                    <div className="space-y-3 font-mono text-sm">
+                      <PhaseRow label="Phase R" value={tel.currentR} />
+                      <PhaseRow label="Phase S" value={tel.currentS} />
+                      <PhaseRow label="Phase T" value={tel.currentT} />
+                    </div>
+                  </div>
+                  <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-rose-500/10 text-rose-400 rounded-lg"><Thermometer size={24} /></div>
+                        <div>
+                          <div className="text-xs text-slate-400 mb-1">دمای روغن (Top Oil)</div>
+                          <div className="font-bold text-slate-200 font-mono">{toPersianDigits(tel.oilTemp)} °C</div>
+                        </div>
+                      </div>
+                      {tel.oilTemp > 85 ? <span className="text-xs font-bold text-rose-400 bg-rose-500/10 px-2 py-1 rounded">داغ</span> : <CheckCircle2 className="text-emerald-500" size={20} />}
+                    </div>
+                    <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-sky-500/10 text-sky-400 rounded-lg"><Gauge size={24} /></div>
+                        <div>
+                          <div className="text-xs text-slate-400 mb-1">ضریب توان (Power Factor)</div>
+                          <div className="font-bold text-slate-200 font-mono">{toPersianDigits(tel.powerFactor)}</div>
+                        </div>
+                      </div>
+                      {tel.powerFactor < 0.85 ? <span className="text-xs font-bold text-amber-400 bg-amber-500/10 px-2 py-1 rounded">خازن‌گذاری</span> : <CheckCircle2 className="text-emerald-500" size={20} />}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
-
-          {/* TAB 4: CUSTOMERS ATTACHED */}
-          {activeTab === 'customers' && (
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800 dark:bg-slate-900/30">
-                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-3">
-                  تفکیک مشترکین متصل به این ترانسفورماتور
-                </h4>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 text-center">
-                  <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                    <div className="text-xs text-slate-500">خانگی</div>
-                    <div className="mt-1 font-mono text-2xl font-bold text-slate-800 dark:text-slate-100">
-                      {formatPersianNumber(transformer.customers.residential)}
-                    </div>
-                  </div>
-                  <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                    <div className="text-xs text-slate-500">تجاری</div>
-                    <div className="mt-1 font-mono text-2xl font-bold text-slate-800 dark:text-slate-100">
-                      {formatPersianNumber(transformer.customers.commercial)}
-                    </div>
-                  </div>
-                  <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                    <div className="text-xs text-slate-500">صنعتی</div>
-                    <div className="mt-1 font-mono text-2xl font-bold text-slate-800 dark:text-slate-100">
-                      {formatPersianNumber(transformer.customers.industrial)}
-                    </div>
-                  </div>
-                  <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                    <div className="text-xs text-slate-500">کشاورزی</div>
-                    <div className="mt-1 font-mono text-2xl font-bold text-slate-800 dark:text-slate-100">
-                      {formatPersianNumber(transformer.customers.agricultural)}
-                    </div>
-                  </div>
-                  <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                    <div className="text-xs text-slate-500">عمومی / اداری</div>
-                    <div className="mt-1 font-mono text-2xl font-bold text-slate-800 dark:text-slate-100">
-                      {formatPersianNumber(transformer.customers.public)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 5: PM & MAINTENANCE */}
-          {activeTab === 'pm' && (
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800 dark:bg-slate-900/30">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    سوابق نگهداری و تعمیرات پیشگیرانه (PM History)
-                  </h4>
-                  <span className="font-mono text-xs text-slate-500">آخرین اقدام: {transformer.lastMaintenanceDate}</span>
-                </div>
-                <div className="space-y-2 text-xs">
-                  <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
-                    <div className="flex items-center justify-between font-bold text-slate-800 dark:text-slate-200">
-                      <span>سرویس دوره‌ای شش ماهه و تست عایقی</span>
-                      <span className="font-mono text-slate-400">۱۴۰۳/۰۸/۱۵</span>
-                    </div>
-                    <p className="mt-1 text-slate-500">
-                      تست مقاومت عایقی میگر (Insulation Resistance)، آچارکشی سرکابل‌های فشار ضعیف، نمونه‌برداری روغن مخزن اصلی
-                    </p>
-                  </div>
-                  <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
-                    <div className="flex items-center justify-between font-bold text-slate-800 dark:text-slate-200">
-                      <span>ترموویژن (تصویربرداری فروسرخ) نقاط داغ</span>
-                      <span className="font-mono text-slate-400">۱۴۰۳/۰۴/۱۸</span>
-                    </div>
-                    <p className="mt-1 text-slate-500">
-                      بررسی بوشینگ‌ها با دوربین حرارتی فلیر - ثبت دمای ۷۸ درجه سانتی‌گراد روی کلمپ فاز S
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
         </div>
 
-        {/* Modal Action Footer */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4 dark:border-slate-800 dark:bg-slate-900/60">
-          <div className="text-xs text-slate-500">
-            شناسه تجهیز در GIS: <span className="font-mono text-slate-700 dark:text-slate-300">{transformer.id}</span>
-          </div>
-
-          <div className="flex items-center gap-2">
+        {workOrderOpen && (
+          <form onSubmit={submitWorkOrder} className="border-t border-slate-800 bg-slate-950/70 px-5 py-4 space-y-3">
+            <h3 className="text-sm font-bold text-rose-200">صدور دستور کار اضطراری نت</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <Field label="نوع عیب" value={workOrder.issue_type} onChange={(value) => setWorkOrder({ ...workOrder, issue_type: value })} placeholder="اضافه بار مکرر و داغی روغن" />
+              <Field label="اکیپ" value={workOrder.assigned_team} onChange={(value) => setWorkOrder({ ...workOrder, assigned_team: value })} placeholder="اکیپ خط گرم شمال قزوین" />
+              <label className="block text-xs text-slate-400">
+                اولویت
+                <select
+                  value={workOrder.priority}
+                  onChange={(event) => setWorkOrder({ ...workOrder, priority: event.target.value })}
+                  className="mt-1 h-10 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none focus:border-rose-500"
+                >
+                  <option value="فوری">فوری</option>
+                  <option value="عادی">عادی</option>
+                </select>
+              </label>
+              <Field label="شرح کار" value={workOrder.description} onChange={(value) => setWorkOrder({ ...workOrder, description: value })} placeholder="شرح اقدام مورد نیاز" />
+            </div>
+            {workNotice && (
+              <p className={`text-xs ${workNotice === 'دستور کار اضطراری ثبت شد' ? 'text-emerald-300' : 'text-rose-300'}`}>{workNotice}</p>
+            )}
             <button
-              onClick={handleCreateWorkOrder}
-              className="flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-rose-500 shadow-md shadow-rose-600/20"
+              type="submit"
+              disabled={workSaving}
+              className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
             >
-              <Wrench className="h-4 w-4" />
-              <span>ثبت دستور کار اضطراری نت</span>
+              {workSaving && <Loader2 size={16} className="animate-spin" />}
+              {workSaving ? 'در حال صدور...' : 'صدور دستور کار'}
             </button>
+          </form>
+        )}
+
+        <div className="p-5 border-t border-slate-800 bg-slate-900/80 flex items-center justify-between">
+          <span className="text-xs text-slate-500 font-mono">شناسه یکتا: {transformer.id}</span>
+          <div className="flex items-center gap-3">
             <button
+              type="button"
               onClick={onClose}
-              className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              className="px-6 py-2.5 rounded-xl text-sm font-bold text-slate-300 bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer border border-slate-700"
             >
               بستن
             </button>
+            <button
+              type="button"
+              onClick={() => setWorkOrderOpen((open) => !open)}
+              className="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-rose-600 hover:bg-rose-500 transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(225,29,72,0.4)]"
+            >
+              <Wrench size={16} /> ثبت دستور کار نت
+            </button>
           </div>
         </div>
-
       </div>
     </div>
   );
-};
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <label className="block text-xs text-slate-400">
+      {label}
+      <input
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-1 h-10 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none focus:border-cyan-500"
+      />
+    </label>
+  );
+}
+
+function PhaseRow({ label, value }: { label: string; value: number | string | undefined }) {
+  return (
+    <div className="flex justify-between items-center bg-slate-900/50 px-3 py-2 rounded-lg">
+      <span className="text-slate-400">{label}</span>
+      <span className="font-bold text-white">{toPersianDigits(value)}</span>
+    </div>
+  );
+}

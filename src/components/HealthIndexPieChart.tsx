@@ -42,7 +42,7 @@ export const HealthIndexPieChart: React.FC<HealthIndexPieChartProps> = ({ transf
   ];
 
   return (
-    <div className="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs dark:border-slate-800/80 dark:bg-[#111827]">
+    <div className="flex flex-col justify-between rounded-2xl border border-[#1e2230] bg-[#11131a] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:border-white/20">
       {/* Header */}
       <div className="border-b border-slate-100 pb-3 dark:border-slate-800/80">
         <div className="flex items-center justify-between">
@@ -67,7 +67,7 @@ export const HealthIndexPieChart: React.FC<HealthIndexPieChartProps> = ({ transf
                 if (active && payload && payload.length) {
                   const item = payload[0].payload;
                   return (
-                    <div className="rounded-xl border border-slate-700 bg-[#111827] p-2.5 text-right text-xs shadow-xl">
+                    <div className="rounded-xl border border-white/10 bg-slate-900/80 p-2.5 text-right text-xs shadow-xl backdrop-blur-xl">
                       <div className="font-bold" style={{ color: item.color }}>
                         {item.name}
                       </div>

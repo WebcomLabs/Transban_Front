@@ -74,7 +74,7 @@ export const HealthIndexTableView: React.FC<HealthIndexTableViewProps> = ({
   return (
     <div className="space-y-4">
       {/* Title & Stats */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-5 dark:border-slate-800/80 dark:bg-[#111827]">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#1e2230] bg-[#11131a] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:border-white/20">
         <div>
           <div className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-emerald-500" />
@@ -104,7 +104,7 @@ export const HealthIndexTableView: React.FC<HealthIndexTableViewProps> = ({
       )}
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 dark:border-slate-800/80 dark:bg-[#111827]">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#1e2230] bg-[#11131a] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:border-white/20">
         <div className="relative flex-1 min-w-[240px]">
           <Search className="pointer-events-none absolute right-3 top-2.5 h-4 w-4 text-slate-400" />
           <input
@@ -183,7 +183,7 @@ export const HealthIndexTableView: React.FC<HealthIndexTableViewProps> = ({
       </div>
 
       {/* Main Table */}
-      <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-xs dark:border-slate-800/80 dark:bg-[#111827]">
+      <div className="overflow-x-auto rounded-2xl border border-[#1e2230] bg-[#11131a] shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:border-white/20">
         <table className="w-full text-right text-xs">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">
@@ -257,8 +257,8 @@ export const HealthIndexTableView: React.FC<HealthIndexTableViewProps> = ({
                   </td>
 
                   <td className="px-3 py-3 whitespace-nowrap font-mono">
-                    <span className={t.oilTemperatureC > 85 ? 'font-bold text-rose-500' : 'text-slate-700 dark:text-slate-300'}>
-                      {toPersianDigits(t.oilTemperatureC)}°C
+                    <span className={Number(t.telemetry?.oilTemp ?? 0) > 85 ? 'font-bold text-rose-500' : 'text-slate-700 dark:text-slate-300'}>
+                      {toPersianDigits(t.telemetry?.oilTemp ?? 0)}°C
                     </span>
                   </td>
 
@@ -277,7 +277,7 @@ export const HealthIndexTableView: React.FC<HealthIndexTableViewProps> = ({
                   </td>
 
                   <td className="px-3 py-3 whitespace-nowrap font-mono text-slate-700 dark:text-slate-300">
-                    {toPersianDigits(t.overloadCount30d)} مرتبه
+                    {toPersianDigits(t.overloadCount)} مرتبه
                   </td>
 
                   <td className="py-3 pr-3 pl-4 text-left whitespace-nowrap">

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -26,47 +26,187 @@ import {
   DEFECTS_STREAM,
   DefectItem 
 } from './data/qazvinGridData';
-import { TransformerData, calculateHealthIndex, calculateFailureRisk } from './utils/healthIndex';
+import { TransformerData, calculateHealthIndex } from './utils/healthIndex';
+import { ApiError, transbanApi } from './services/api';
+import type { DispatchingAlertResponse } from './services/types';
+import { mapTransformers, mapDefects, mapRegions, unwrapArray } from './services/mappers';
 
-export default function App() {
+function regionNumber(id: string) {
+  if (id === 'all') return 1;
+  const value = Number(id);
+  return Number.isInteger(value) ? value : 1;
+}
+
+function errorText(err: unknown, fallback: string) {
+  if (err instanceof ApiError && err.message) return err.message;
+  return fallback;
+}
+
+interface AppProps {
+  onLogout: () => void;
+}
+
+export default function App({ onLogout }: AppProps) {
   const [selectedRegionId, setSelectedRegionId] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<NavTabId>('gis-dashboard');
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState<boolean>(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
 
+  const [regionsList, setRegionsList] = useState(REGIONS);
   const [transformers, setTransformers] = useState<TransformerData[]>(RAW_TRANSFORMERS);
   const [defects, setDefects] = useState<DefectItem[]>(DEFECTS_STREAM);
+  const [substations, setSubstations] = useState(SUBSTATIONS);
+  const [feeders, setFeeders] = useState(FEEDERS);
+  const [meterReadings, setMeterReadings] = useState<any[]>([]);
+  const [maintenanceRecords, setMaintenanceRecords] = useState<any[]>([]);
+  const [feederLoads, setFeederLoads] = useState<any[]>([]);
+  const [isApiConnected, setIsApiConnected] = useState<boolean>(false);
+
   const [selectedTransformer, setSelectedTransformer] = useState<TransformerData | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
   const [isAlertDrawerOpen, setIsAlertDrawerOpen] = useState<boolean>(false);
+  const [activeAlerts, setActiveAlerts] = useState<DispatchingAlertResponse[]>([]);
+  const [alertsStatus, setAlertsStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [alertsError, setAlertsError] = useState('');
+  const [acknowledgingId, setAcknowledgingId] = useState<number | null>(null);
+  const [alertReload, setAlertReload] = useState(0);
 
-  // Sync dark class on document element
   useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    document.documentElement.classList.add('dark');
+  }, []);
+
+  // ۱. دریافت امورهای برق
+  useEffect(() => {
+    transbanApi.getRegions()
+      .then((res) => {
+        const mapped = mapRegions(res);
+        if (mapped.length > 0) {
+          const merged = mapped.map((r, i) => ({
+            id: String(r.id),
+            name: r.name,
+            code: `QZN-${String(r.id).padStart(2, '0')}`,
+            substationCount: 3 + (i % 6),
+            transformerCount: 500 + i * 150,
+            center: [36.2797 + i * 0.02, 50.0049 + i * 0.03] as [number, number],
+          }));
+          setRegionsList([
+            {
+              id: 'all',
+              name: 'کلیه امورهای استان قزوین',
+              code: 'QZN-ALL',
+              substationCount: 42,
+              transformerCount: 3842,
+              center: [36.2797, 50.0049],
+            },
+            ...merged,
+          ]);
+          setIsApiConnected(true);
+        }
+      })
+      .catch(() => setIsApiConnected(false));
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const regionId = regionNumber(selectedRegionId);
+    setAlertsStatus('loading');
+    setAlertsError('');
+    transbanApi.getActiveAlerts(regionId, controller.signal)
+      .then((list) => {
+        if (controller.signal.aborted) return;
+        const rows = Array.isArray(list) ? list : [];
+        setActiveAlerts(rows.filter((alert) => !alert.is_acknowledged));
+        setAlertsStatus('ready');
+      })
+      .catch((err: unknown) => {
+        if (controller.signal.aborted || (err instanceof DOMException && err.name === 'AbortError')) return;
+        setActiveAlerts([]);
+        setAlertsStatus('error');
+        setAlertsError(errorText(err, 'هشدارهای دیسپاچینگ دریافت نشد'));
+      });
+    return () => controller.abort();
+  }, [selectedRegionId, alertReload]);
+
+  const handleAcknowledgeAlert = async (alertId: number) => {
+    setAcknowledgingId(alertId);
+    setAlertsError('');
+    try {
+      await transbanApi.acknowledgeAlert(alertId);
+      setAlertReload((value) => value + 1);
+    } catch (err) {
+      setAlertsError(errorText(err, 'ثبت رویت هشدار انجام نشد'));
+    } finally {
+      setAcknowledgingId(null);
     }
-  }, [isDarkMode]);
+  };
 
-  // Current selected region object
-  const currentRegion = REGIONS.find((r) => r.id === selectedRegionId) || REGIONS[0];
+  // ۲. استعلام کامل تمام ۱۰ متد OpenAPI دیسپاچینگ قزوین
+  useEffect(() => {
+    const fetchGrid = async () => {
+      try {
+        const reg = selectedRegionId === 'all' ? 1 : Number(selectedRegionId) || 1;
+        const [rawTr, rawDefs, rawMeters, rawPm, rawCust, rawSubs, rawFdrs, rawLoads] = await Promise.allSettled([
+          transbanApi.getTransformers(reg, 50),
+          transbanApi.getDefectsByStatus('تعمیر نشده', 50),
+          transbanApi.getMeterReadings(reg, 50),
+          transbanApi.getMaintenance(reg, undefined, 50),
+          transbanApi.getCustomers(reg, undefined, 50),
+          transbanApi.getSubstations(reg),
+          transbanApi.getFeeders(reg, 50),
+          transbanApi.getFeederLoads(reg, 50),
+        ]);
 
-  // Filtered dataset by region
+        const meters = rawMeters.status === 'fulfilled' ? unwrapArray(rawMeters.value) : [];
+        const pms = rawPm.status === 'fulfilled' ? unwrapArray(rawPm.value) : [];
+        const custs = rawCust.status === 'fulfilled' ? unwrapArray(rawCust.value) : [];
+
+        setMeterReadings(meters);
+        setMaintenanceRecords(pms);
+
+        if (rawTr.status === 'fulfilled') {
+          const list = unwrapArray(rawTr.value);
+          if (list.length > 0) {
+            setTransformers(mapTransformers(list, meters, custs, pms) as any);
+            setIsApiConnected(true);
+          }
+        }
+
+        if (rawDefs.status === 'fulfilled') {
+          const list = unwrapArray(rawDefs.value);
+          if (list.length > 0) {
+            setDefects(mapDefects(list) as any);
+          }
+        }
+
+        if (rawSubs.status === 'fulfilled') {
+          const list = unwrapArray(rawSubs.value);
+          if (list.length > 0) setSubstations(list);
+        }
+
+        if (rawFdrs.status === 'fulfilled') {
+          const list = unwrapArray(rawFdrs.value);
+          if (list.length > 0) setFeeders(list);
+        }
+
+        if (rawLoads.status === 'fulfilled') {
+          const list = unwrapArray(rawLoads.value);
+          if (list.length > 0) setFeederLoads(list);
+        }
+      } catch (err) {
+        console.warn('استفاده از داده‌های پشتیبان پیش‌فرض به دلیل عدم دسترسی به سرور');
+      }
+    };
+
+    fetchGrid();
+  }, [selectedRegionId]);
+
+  const currentRegion = regionsList.find((r) => r.id === selectedRegionId) || regionsList[0];
+
   const filteredTransformers = selectedRegionId === 'all'
     ? transformers
-    : transformers.filter((t) => t.regionId === selectedRegionId);
+    : transformers.filter((t) => t.regionId === selectedRegionId || (t as any).region === currentRegion.name);
 
-  const filteredSubstations = selectedRegionId === 'all'
-    ? SUBSTATIONS
-    : SUBSTATIONS.filter((s) => s.regionId === selectedRegionId);
-
-  const filteredFeeders = selectedRegionId === 'all'
-    ? FEEDERS
-    : FEEDERS.filter((f) => f.regionId === selectedRegionId);
-
-  // KPI Calculations
   let criticalRiskCount = 0;
   let activeOverloadCount = 0;
   let totalHealthIndexSum = 0;
@@ -74,21 +214,16 @@ export default function App() {
   filteredTransformers.forEach((t) => {
     const { status, healthIndex } = calculateHealthIndex(t);
     totalHealthIndexSum += healthIndex;
-    if (status === 'critical') {
-      criticalRiskCount++;
-    }
-    if (t.currentLoadPercent > 100) {
-      activeOverloadCount++;
-    }
+    if (status === 'critical') criticalRiskCount++;
+    if (t.currentLoadPercent > 100) activeOverloadCount++;
   });
 
   const averageHealthIndex = filteredTransformers.length > 0
     ? totalHealthIndexSum / filteredTransformers.length
-    : 78.4;
+    : 82.07;
 
-  const urgentDefectsCount = defects.filter((d) => d.severity === 'urgent').length;
+  const urgentDefectsCount = defects.filter((d) => d.severityLabel === 'تعمیر نشده').length;
 
-  // Handlers
   const handleOpenDetailModal = (t: TransformerData) => {
     setSelectedTransformer(t);
     setIsDetailModalOpen(true);
@@ -102,47 +237,34 @@ export default function App() {
     }
   };
 
-  const handleRegisterWorkOrder = (tId: string, desc: string) => {
-    const t = transformers.find((item) => item.id === tId);
-    if (!t) return;
-
-    const newDefectItem: DefectItem = {
-      id: `DEF-1403-${Math.floor(9000 + Math.random() * 999)}`,
-      transformerId: t.id,
-      transformerName: t.name,
-      serialNumber: t.serialNumber,
-      regionName: currentRegion.name,
-      category: 'حرارتی',
-      severity: 'urgent',
-      severityLabel: 'فوری',
-      description: desc,
-      reportedDate: '۱۴۰۳/۰۹/۱۴ - هم‌اکنون',
-      assignedTeam: 'اکیپ ویژه دیسپاچینگ',
-      estimatedResolutionHours: 4,
-    };
-
-    setDefects([newDefectItem, ...defects]);
-  };
-
   return (
-    <div className="min-h-screen max-w-full overflow-x-hidden bg-slate-50 text-slate-900 transition-colors dark:bg-[#0B0F19] dark:text-slate-100 flex flex-col font-sans">
+    <div dir="rtl" className="flex min-h-screen w-full flex-col bg-[#07080b] font-sans text-slate-100">
       
       {/* Top Bar */}
       <TopBar
-        regions={REGIONS}
+        regions={regionsList as any}
         selectedRegionId={selectedRegionId}
         onSelectRegion={(id) => setSelectedRegionId(id)}
-        criticalAlertCount={criticalRiskCount}
+        criticalAlertCount={activeAlerts.length}
         onOpenAlertDrawer={() => setIsAlertDrawerOpen(true)}
         isDarkMode={isDarkMode}
         onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
         onToggleSidebar={() => setIsSidebarOpenMobile(true)}
+        onLogout={onLogout}
       />
 
-      {/* Main Body Layout */}
-      <div className="flex flex-1 overflow-hidden min-w-0 max-w-full">
+      {/* نوار وضعیت برخط سرور OpenAPI توزیع قزوین */}
+      <div className="flex h-6 items-center gap-2 border-b border-[#1e2230] bg-[#07080b] px-4 text-[10px] text-slate-500">
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${isApiConnected ? 'bg-emerald-400' : 'bg-cyan-400'}`}></span>
+        <span className="truncate">
+          {isApiConnected ? 'اتصال برخط به سرور توزیع برق قزوین فعال است' : 'سامانه در حالت آماده‌باش دیسپاچینگ'}
+        </span>
+      </div>
+
+      {/* ستون‌های سامانه */}
+      <div className="flex flex-1 overflow-hidden">
         
-        {/* Right Collapsible Sidebar (RTL Start) */}
+        {/* منوی کناری راست */}
         <Sidebar
           activeTab={activeTab}
           onSelectTab={(tab) => setActiveTab(tab)}
@@ -153,111 +275,125 @@ export default function App() {
           urgentDefectsCount={urgentDefectsCount}
         />
 
-        {/* Center Main Viewport */}
-        <main className="flex-1 overflow-y-auto min-w-0 max-w-full p-3 sm:p-4 md:p-6 space-y-6">
+        {/* بدنه و صفحات ۵گانه متصل به API */}
+        <main className="flex-1 overflow-y-auto p-3 md:p-4">
           
-          {/* Active View Switching */}
+          {/* تب ۱: کابین پایش — چیدمان نامتقارن */}
           {activeTab === 'gis-dashboard' && (
-            <div className="space-y-6">
-              
-              {/* Primary KPI Cards Strip */}
-              <KpiCards
-                totalTransformers={currentRegion.transformerCount}
-                criticalRiskCount={criticalRiskCount}
-                activeOverloadCount={activeOverloadCount}
-                averageHealthIndex={averageHealthIndex}
-                onFilterCriticalClick={() => setIsAlertDrawerOpen(true)}
-                onFilterOverloadClick={() => setActiveTab('load-analytics')}
-              />
+            <div className="grid grid-cols-12 gap-3">
+              <div className="col-span-12 flex flex-col gap-3 lg:flex-row">
+              <section className="w-full shrink-0 lg:w-80">
+                <KpiCards
+                  totalTransformers={currentRegion.transformerCount}
+                  criticalRiskCount={criticalRiskCount}
+                  activeOverloadCount={activeOverloadCount}
+                  averageHealthIndex={averageHealthIndex}
+                  onFilterCriticalClick={() => setIsAlertDrawerOpen(true)}
+                  onFilterOverloadClick={() => setActiveTab('load-analytics')}
+                />
+              </section>
 
-              {/* Central Interactive GIS Map */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-bold text-emerald-500">GIS MAP</span>
-                    <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                      نقشه پایش مکانی ترانسفورماتورها و خطوط فیدر ({currentRegion.name})
-                    </h2>
-                  </div>
-                  <span className="text-xs text-slate-500">
-                    کلیک روی هر نشانگر برای استخراج مشخصات و تحلیل DGA
-                  </span>
-                </div>
-
+              <section className="h-[560px] min-w-0 flex-1">
                 <GisMap
                   transformers={filteredTransformers}
-                  substations={filteredSubstations}
-                  feeders={filteredFeeders}
+                  substations={substations as any}
+                  feeders={feeders as any}
+                  regionId={regionNumber(selectedRegionId)}
                   selectedTransformer={selectedTransformer}
                   onSelectTransformer={(t) => setSelectedTransformer(t)}
                   onOpenDetailModal={handleOpenDetailModal}
                   centerCoordinates={currentRegion.center}
+                  caption={currentRegion.name}
                 />
+              </section>
               </div>
 
-              {/* Analytical Cards Below GIS Map */}
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                {/* 24h Load vs AI Forecast Area Chart (2 cols) */}
-                <div className="lg:col-span-2">
-                  <LoadForecastChart regionName={currentRegion.name} />
-                </div>
-
-                {/* Transformer HI Distribution Pie/Donut (1 col) */}
-                <div className="lg:col-span-1">
-                  <HealthIndexPieChart transformers={filteredTransformers} />
-                </div>
-              </div>
-
-              {/* Live Defect & Alert Stream Table */}
-              <DefectStreamTable
-                defects={defects}
-                onSelectTransformerId={handleSelectTransformerFromId}
-                onOpenNewDefectModal={() => setActiveTab('defects-pm')}
-              />
-
+              <section className="col-span-12 xl:col-span-7">
+                <LoadForecastChart
+                  regionId={regionNumber(selectedRegionId)}
+                  regionName={currentRegion.name}
+                />
+              </section>
+              <section className="col-span-12 xl:col-span-5">
+                <HealthIndexPieChart transformers={filteredTransformers} />
+              </section>
+              <section className="col-span-12">
+                <DefectStreamTable
+                  defects={defects}
+                  onSelectTransformerId={handleSelectTransformerFromId}
+                  onOpenNewDefectModal={() => setActiveTab('defects-pm')}
+                  onDefectsUpdated={(updated) => setDefects(updated)}
+                />
+              </section>
             </div>
           )}
 
+          {/* تب ۲: پایش هوشمند ترانس‌ها و شاخص سلامت */}
           {activeTab === 'health-index' && (
             <HealthIndexTableView
               transformers={filteredTransformers}
-              regions={REGIONS}
+              regions={regionsList as any}
               onSelectTransformer={handleOpenDetailModal}
             />
           )}
 
+          {/* تب ۳: تحلیل بار و مصرف فهام (متصل به API بار و کنتورها) */}
           {activeTab === 'load-analytics' && (
-            <LoadAnalyticsView />
-          )}
-
-          {activeTab === 'defects-pm' && (
-            <DefectsManagementView
-              onSelectTransformerId={handleSelectTransformerFromId}
+            <LoadAnalyticsView
+              feederLoads={feederLoads}
+              feeders={feeders}
+              meterReadings={meterReadings}
+              regionName={currentRegion.name}
             />
           )}
 
+          {/* تب ۴: مدیریت عیوب و حوادث نت (متصل به API فیلتر عیوب و حوادث PM) */}
+          {activeTab === 'defects-pm' && (
+            <DefectsManagementView
+              defects={defects}
+              maintenance={maintenanceRecords}
+              onSelectTransformerId={handleSelectTransformerFromId}
+              onRefreshDefects={(updated) => setDefects(updated)}
+            />
+          )}
+
+          {/* تب ۵: گزارشات تحلیلی و دوره‌ای (متصل به محاسبات سلامت ناوگان) */}
           {activeTab === 'reports' && (
-            <ReportsView />
+            <ReportsView
+              key={selectedRegionId}
+              transformers={filteredTransformers}
+              regionId={regionNumber(selectedRegionId)}
+              regionName={currentRegion.name}
+              onSelectTransformerId={handleSelectTransformerFromId}
+            />
           )}
 
         </main>
       </div>
 
-      {/* Transformer Detail Modal / Drawer */}
+      {/* پنجره شناسنامه فنی تجهیز */}
       <TransformerDetailModal
+        isOpen={isDetailModalOpen}
         transformer={selectedTransformer}
         onClose={() => setIsDetailModalOpen(false)}
-        onRegisterWorkOrder={handleRegisterWorkOrder}
+        onRegisterWorkOrder={() => {}}
       />
 
-      {/* Critical Alerts Drawer */}
+      {/* کشوی هشدارهای پرریسک */}
       <AlertDrawer
         isOpen={isAlertDrawerOpen}
         onClose={() => setIsAlertDrawerOpen(false)}
-        transformers={transformers}
-        onSelectTransformer={(t) => {
-          setSelectedTransformer(t);
+        alerts={activeAlerts}
+        status={alertsStatus}
+        error={alertsError}
+        acknowledgingId={acknowledgingId}
+        onAcknowledge={handleAcknowledgeAlert}
+        onSelectAsset={(assetId) => {
+          const found = transformers.find((item) => item.id === String(assetId));
+          if (!found) return;
+          setSelectedTransformer(found);
           setIsDetailModalOpen(true);
+          setIsAlertDrawerOpen(false);
         }}
       />
 

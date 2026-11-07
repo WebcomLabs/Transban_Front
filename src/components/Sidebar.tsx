@@ -89,12 +89,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed inset-y-0 right-0 z-[9991] flex flex-col border-l border-slate-200 bg-white transition-all duration-300 dark:border-slate-800/80 dark:bg-[#0E131F] md:static ${
+        className={`fixed inset-y-0 right-0 z-[9991] flex flex-col border-l border-[#1e2230] bg-[#090a0f] transition-all duration-300 md:static ${
           isOpenMobile ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
         } ${isCollapsed ? 'md:w-20' : 'md:w-72'} w-72`}
       >
         {/* Mobile Header */}
-        <div className="flex h-16 items-center justify-between border-b border-slate-200 px-4 dark:border-slate-800/80 md:hidden">
+        <div className="flex h-16 items-center justify-between border-b border-[#1e2230] px-4 md:hidden">
           <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
             منوی سامانه‌ ترانسبان
           </span>
@@ -108,7 +108,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Desktop Collapse Button */}
-        <div className="hidden items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800/80 md:flex">
+        <div className="hidden items-center justify-between border-b border-[#1e2230] px-4 py-3 md:flex">
           {!isCollapsed && (
             <span className="text-[11px] font-semibold tracking-wider text-slate-400 dark:text-slate-500">
               زیرسیستم‌های یکپارچه
@@ -117,7 +117,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <button
             onClick={onToggleCollapse}
             aria-label={isCollapsed ? 'گسترش منو' : 'جمع کردن منو'}
-            className={`flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 ${
+            className={`flex h-7 w-7 items-center justify-center rounded-lg border border-[#1e2230] text-slate-400 transition-all duration-300 hover:border-white/20 hover:bg-white/5 hover:text-slate-100 ${
               isCollapsed ? 'mx-auto' : ''
             }`}
           >
@@ -143,17 +143,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onCloseMobile();
                 }}
                 title={isCollapsed ? item.label : undefined}
-                className={`group relative flex w-full items-center rounded-xl px-3 py-3 text-right text-sm font-medium transition-all ${
+                className={`group relative flex w-full items-center rounded-2xl px-3 py-3 text-right text-sm font-medium transition-all duration-300 ${
                   isActive
-                    ? 'bg-emerald-500/10 text-emerald-600 shadow-xs dark:bg-emerald-500/15 dark:text-emerald-400'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-200'
+                    ? 'bg-cyan-500/10 text-cyan-300'
+                    : 'text-slate-500 hover:bg-[#11131a] hover:text-slate-200'
                 }`}
               >
                 <div
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-300 ${
                     isActive
-                      ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30'
-                      : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200 dark:bg-slate-800/80 dark:text-slate-400 dark:group-hover:bg-slate-700'
+                      ? 'bg-cyan-500/10 text-cyan-400 ring-1 ring-cyan-400/30'
+                      : 'bg-[#11131a] text-slate-500 group-hover:text-slate-300'
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -186,7 +186,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                 {/* Active Indicator Line */}
                 {isActive && (
-                  <span className="absolute inset-y-2 right-0 w-1 rounded-l-full bg-emerald-500" />
+                  <span className="absolute inset-y-4 right-1.5 w-1 rounded-full bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.8)]" />
                 )}
               </button>
             );
@@ -195,8 +195,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Subsystem Integration Status Box in Footer */}
         {!isCollapsed ? (
-          <div className="border-t border-slate-200 p-4 dark:border-slate-800/80">
-            <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3 dark:border-slate-800/60 dark:bg-slate-900/60">
+          <div className="border-t border-[#1e2230] p-4">
+            <div className="rounded-2xl border border-[#1e2230] bg-[#11131a] p-3">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
                   اتصال ۴ سامانه مبنا
@@ -227,7 +227,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
         ) : (
-          <div className="border-t border-slate-200 p-3 text-center dark:border-slate-800/80">
+          <div className="border-t border-[#1e2230] p-3 text-center">
             <div className="flex h-8 w-8 mx-auto items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" title="اتصال کامل سیستم‌های چهارگانه">
               <Gauge className="h-4 w-4" />
             </div>

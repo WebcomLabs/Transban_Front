@@ -4,15 +4,7 @@
  */
 
 import React from 'react';
-import { 
-  Zap, 
-  AlertOctagon, 
-  Flame, 
-  HeartPulse, 
-  TrendingDown, 
-  TrendingUp, 
-  CheckCircle2 
-} from 'lucide-react';
+import { Activity, AlertTriangle, Gauge, HeartPulse } from 'lucide-react';
 import { toPersianDigits, formatPersianNumber } from '../utils/healthIndex';
 
 interface KpiCardsProps {
@@ -33,104 +25,83 @@ export const KpiCards: React.FC<KpiCardsProps> = ({
   onFilterOverloadClick,
 }) => {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      
-      {/* 1. Total Transformers */}
-      <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs transition-all hover:border-slate-300 dark:border-slate-800/80 dark:bg-[#111827] dark:hover:border-slate-700">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-            کل ترانسفورماتورهای تحت پایش
-          </span>
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400">
-            <Zap className="h-4 w-4" />
-          </div>
-        </div>
-        <div className="mt-3 flex items-baseline gap-2">
-          <span className="font-mono text-2xl font-black tracking-tight text-slate-900 dark:text-white md:text-3xl">
-            {formatPersianNumber(totalTransformers)}
-          </span>
-          <span className="text-xs text-slate-500 dark:text-slate-400">دستگاه</span>
-        </div>
-        <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400">
-          <CheckCircle2 className="h-3.5 w-3.5" />
-          <span>پوشش ۱۰۰٪ تله‌متری فهام و GIS</span>
-        </div>
-      </div>
-
-      {/* 2. Critical Failure Risk Transformers */}
-      <div 
+    <div className="grid grid-cols-2 gap-2">
+      <Widget
+        label="ناوگان تحت پایش"
+        value={formatPersianNumber(totalTransformers)}
+        hint="دستگاه"
+        tone="text-cyan-400"
+        chip="bg-cyan-500/10 text-cyan-400"
+        icon={Activity}
+      />
+      <Widget
+        label="پرریسک"
+        value={toPersianDigits(criticalRiskCount)}
+        hint="مداخله"
+        tone="text-rose-400"
+        chip="bg-rose-500/10 text-rose-400"
+        icon={AlertTriangle}
         onClick={onFilterCriticalClick}
-        className="group relative cursor-pointer overflow-hidden rounded-2xl border border-rose-500/30 bg-white p-4 shadow-xs transition-all hover:border-rose-500/60 hover:shadow-md hover:shadow-rose-500/5 dark:border-rose-500/25 dark:bg-[#111827] dark:hover:border-rose-500/50"
-      >
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-            ترانس‌های پرریسک / هشدار خرابی
-          </span>
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-500/15 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400">
-            <AlertOctagon className="h-4 w-4" />
-          </div>
-        </div>
-        <div className="mt-3 flex items-baseline gap-2">
-          <span className="font-mono text-2xl font-black tracking-tight text-rose-600 dark:text-rose-400 md:text-3xl">
-            {toPersianDigits(criticalRiskCount)}
-          </span>
-          <span className="text-xs text-slate-500 dark:text-slate-400">نیازمند مداخله فوری</span>
-        </div>
-        <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-rose-600 dark:text-rose-400">
-          <TrendingUp className="h-3.5 w-3.5" />
-          <span>ریسک سوختگی در ۳۰ روز آینده &gt; ۶۰٪</span>
-        </div>
-        <div className="absolute top-0 right-0 h-1 w-full bg-gradient-to-l from-rose-500 to-amber-500" />
-      </div>
-
-      {/* 3. Active Repeated Overloads */}
-      <div 
+      />
+      <Widget
+        label="اضافه‌بار"
+        value={toPersianDigits(activeOverloadCount)}
+        hint="فعال"
+        tone="text-rose-400"
+        chip="bg-rose-500/10 text-rose-400"
+        icon={Gauge}
         onClick={onFilterOverloadClick}
-        className="group relative cursor-pointer overflow-hidden rounded-2xl border border-amber-500/30 bg-white p-4 shadow-xs transition-all hover:border-amber-500/60 hover:shadow-md hover:shadow-amber-500/5 dark:border-amber-500/25 dark:bg-[#111827] dark:hover:border-amber-500/50"
-      >
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-            اضافه بارهای تکراری فعال
-          </span>
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
-            <Flame className="h-4 w-4" />
-          </div>
-        </div>
-        <div className="mt-3 flex items-baseline gap-2">
-          <span className="font-mono text-2xl font-black tracking-tight text-amber-600 dark:text-amber-400 md:text-3xl">
-            {toPersianDigits(activeOverloadCount)}
-          </span>
-          <span className="text-xs text-slate-500 dark:text-slate-400">نقطه حرارتی فعال</span>
-        </div>
-        <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400">
-          <TrendingDown className="h-3.5 w-3.5" />
-          <span>بار بیش از ۱۰۰٪ نامی در ساعات اوج</span>
-        </div>
-        <div className="absolute top-0 right-0 h-1 w-full bg-gradient-to-l from-amber-500 to-yellow-400" />
-      </div>
-
-      {/* 4. Average Health Index */}
-      <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-white p-4 shadow-xs transition-all hover:border-emerald-500/60 dark:border-emerald-500/25 dark:bg-[#111827] dark:hover:border-emerald-500/50">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-            میانگین شاخص سلامت شبکه (HI)
-          </span>
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
-            <HeartPulse className="h-4 w-4" />
-          </div>
-        </div>
-        <div className="mt-3 flex items-baseline gap-2">
-          <span className="font-mono text-2xl font-black tracking-tight text-emerald-600 dark:text-emerald-400 md:text-3xl">
-            {toPersianDigits(averageHealthIndex.toFixed(1))}٪
-          </span>
-          <span className="text-xs text-slate-500 dark:text-slate-400">وضعیت کلی پایدار</span>
-        </div>
-        <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400">
-          <span>هدف شرکت: حفظ بالای ۷۵٪ بر پایه استاندارد IEC</span>
-        </div>
-        <div className="absolute top-0 right-0 h-1 w-full bg-gradient-to-l from-emerald-500 to-cyan-500" />
-      </div>
-
+      />
+      <Widget
+        label="شاخص سلامت"
+        value={`${toPersianDigits(averageHealthIndex.toFixed(1))}٪`}
+        hint="میانگین"
+        tone="text-emerald-400"
+        chip="bg-emerald-500/10 text-emerald-400"
+        icon={HeartPulse}
+      />
     </div>
   );
 };
+
+function Widget({
+  label,
+  value,
+  hint,
+  tone,
+  chip,
+  icon: Icon,
+  onClick,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  tone: string;
+  chip: string;
+  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
+  onClick?: () => void;
+}) {
+  const className = 'flex w-full items-center gap-2 rounded-2xl border border-[#1e2230] bg-[#11131a] px-2.5 py-2 text-right transition hover:border-cyan-400/25';
+  const body = (
+    <>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-[10px] leading-4 text-slate-500">{label}</div>
+        <div className="mt-0.5 flex items-baseline gap-1">
+          <span className={`text-lg font-semibold leading-none tracking-tight ${tone}`}>{value}</span>
+          <span className="truncate text-[10px] text-slate-500">{hint}</span>
+        </div>
+      </div>
+      <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${chip}`}>
+        <Icon size={14} strokeWidth={1.75} />
+      </span>
+    </>
+  );
+
+  if (!onClick) return <div className={className}>{body}</div>;
+
+  return (
+    <button type="button" onClick={onClick} className={className}>
+      {body}
+    </button>
+  );
+}
