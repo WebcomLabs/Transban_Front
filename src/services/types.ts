@@ -248,3 +248,84 @@ export interface SystemStatusResponse {
   version?: string;
   [key: string]: unknown;
 }
+
+/**
+ * اسکیماهای منطقه‌ای سواگر ۱.۱.۰.
+ * قرارداد صفحه‌بندی قبلی (`Paginated`) دست نخورده است؛ این شکل همان پاسخ سرور است.
+ */
+export interface PaginatedResponse<T> {
+  total_records: number;
+  current_page: number;
+  page_size: number;
+  total_pages: number;
+  data: T[];
+}
+
+/** همان StatusEnum سواگر؛ جدا از DefectStatusType تا قرارداد قبلی عوض نشود. */
+export type StatusEnum = 'تعمیر شده' | 'تعمیر نشده' | 'در انتظار تایید ناظر عالی';
+
+export interface RegionSchema {
+  id: number;
+  name: string;
+}
+
+export interface SubstationSchema {
+  id: number;
+  region_id: number;
+  name: string;
+  lat: number;
+  lon: number;
+}
+
+export interface FeederSchema {
+  id: number;
+  substation_id: number;
+  name: string;
+  voltage: string;
+}
+
+export interface TransformerSchema {
+  id: number;
+  feeder_id: number;
+  capacity_kva: number;
+  install_date: string | null;
+  lat: number;
+  lon: number;
+}
+
+export interface CustomerSchema {
+  id: number;
+  transformer_id: number;
+  bill_id: string;
+  tariff_type: string;
+  is_smart: boolean;
+}
+
+export interface MeterReadingSchema {
+  id: number;
+  customer_id: number;
+  timestamp: string;
+  active_power_kw: number;
+  voltage: number;
+}
+
+export interface MaintenanceRecordSchema {
+  id: number;
+  crew_id: number | null;
+  asset_type: string;
+  asset_id: number;
+  issue_type: string;
+  priority: string;
+  status: string;
+  reported_at: string;
+  repaired_at: string | null;
+  description: string | null;
+  resolution_note: string | null;
+}
+
+export interface FeederLoadSchema {
+  id: number;
+  feeder_id: number;
+  timestamp: string;
+  current_amps: number;
+}

@@ -59,7 +59,6 @@ export default function App({ onLogout }: AppProps) {
   const [substations, setSubstations] = useState(SUBSTATIONS);
   const [feeders, setFeeders] = useState(FEEDERS);
   const [meterReadings, setMeterReadings] = useState<any[]>([]);
-  const [maintenanceRecords, setMaintenanceRecords] = useState<any[]>([]);
   const [feederLoads, setFeederLoads] = useState<any[]>([]);
   const [isApiConnected, setIsApiConnected] = useState<boolean>(false);
 
@@ -162,7 +161,6 @@ export default function App({ onLogout }: AppProps) {
         const custs = rawCust.status === 'fulfilled' ? unwrapArray(rawCust.value) : [];
 
         setMeterReadings(meters);
-        setMaintenanceRecords(pms);
 
         if (rawTr.status === 'fulfilled') {
           const list = unwrapArray(rawTr.value);
@@ -340,9 +338,7 @@ export default function App({ onLogout }: AppProps) {
           {/* تب ۳: تحلیل بار و مصرف فهام (متصل به API بار و کنتورها) */}
           {activeTab === 'load-analytics' && (
             <LoadAnalyticsView
-              feederLoads={feederLoads}
-              feeders={feeders}
-              meterReadings={meterReadings}
+              regionId={regionNumber(selectedRegionId)}
               regionName={currentRegion.name}
             />
           )}
@@ -350,8 +346,8 @@ export default function App({ onLogout }: AppProps) {
           {/* تب ۴: مدیریت عیوب و حوادث نت (متصل به API فیلتر عیوب و حوادث PM) */}
           {activeTab === 'defects-pm' && (
             <DefectsManagementView
+              regionId={regionNumber(selectedRegionId)}
               defects={defects}
-              maintenance={maintenanceRecords}
               onSelectTransformerId={handleSelectTransformerFromId}
               onRefreshDefects={(updated) => setDefects(updated)}
             />

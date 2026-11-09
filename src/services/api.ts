@@ -9,11 +9,20 @@
   DispatchingAlertResponse,
   FeederNetworkGeoJson,
   ListResponse,
+  CustomerSchema,
+  FeederLoadSchema,
+  FeederSchema,
   LoadForecastResponse,
   LoginRequest,
   LossesUnbalanceResponse,
+  MaintenanceRecordSchema,
   MaintenanceStatusType,
+  MeterReadingSchema,
+  PaginatedResponse,
+  RegionSchema,
   ReplacementCandidate,
+  SubstationSchema,
+  TransformerSchema,
   SystemStatusResponse,
   TariffType,
   TokenResponse,
@@ -35,11 +44,20 @@ export type {
   FeederNetworkGeoJson,
   HTTPValidationError,
   ListResponse,
+  CustomerSchema,
+  FeederLoadSchema,
+  FeederSchema,
   LoadForecastResponse,
   LoginRequest,
   LossesUnbalanceResponse,
+  MaintenanceRecordSchema,
   MaintenanceStatusType,
+  MeterReadingSchema,
   Paginated,
+  PaginatedResponse,
+  RegionSchema,
+  SubstationSchema,
+  TransformerSchema,
   ReplacementCandidate,
   SystemStatusResponse,
   TariffType,
@@ -217,27 +235,33 @@ export const transbanApi = {
     }),
 
   getRegions: (signal?: AbortSignal) =>
-    request<unknown>('/api/v1/regional/regions', { signal }),
+    request<RegionSchema[]>('/api/v1/regional/regions', { signal, strict: true }),
 
+  /** page از ۱؛ page_size حداکثر ۱۰۰. */
   getSubstations: (regionId = 1, signal?: AbortSignal, page = 1, pageSize = 20) =>
-    request<unknown>('/api/v1/regional/substations', {
-      params: { region_id: regionId, page, page_size: pageSize },
-      signal,
-    }),
-
-  getFeeders: (regionId = 1, pageSize = 50, signal?: AbortSignal, page = 1) =>
-    request<unknown>('/api/v1/regional/feeders', {
+    request<PaginatedResponse<SubstationSchema>>('/api/v1/regional/substations', {
       params: { region_id: regionId, page, page_size: pageSize },
       signal,
       strict: true,
     }),
 
-  getTransformers: (regionId = 1, pageSize = 50, signal?: AbortSignal, page = 1) =>
-    request<unknown>('/api/v1/regional/transformers', {
+  /** page از ۱؛ page_size حداکثر ۱۰۰. */
+  getFeeders: (regionId = 1, pageSize = 50, signal?: AbortSignal, page = 1) =>
+    request<PaginatedResponse<FeederSchema>>('/api/v1/regional/feeders', {
       params: { region_id: regionId, page, page_size: pageSize },
       signal,
+      strict: true,
     }),
 
+  /** page از ۱؛ page_size حداکثر ۲۰۰. */
+  getTransformers: (regionId = 1, pageSize = 50, signal?: AbortSignal, page = 1) =>
+    request<PaginatedResponse<TransformerSchema>>('/api/v1/regional/transformers', {
+      params: { region_id: regionId, page, page_size: pageSize },
+      signal,
+      strict: true,
+    }),
+
+  /** tariff_type اختیاری است. page از ۱؛ page_size حداکثر ۲۰۰. */
   getCustomers: (
     regionId = 1,
     tariffType?: TariffType,
@@ -245,11 +269,13 @@ export const transbanApi = {
     signal?: AbortSignal,
     page = 1,
   ) =>
-    request<unknown>('/api/v1/regional/customers', {
+    request<PaginatedResponse<CustomerSchema>>('/api/v1/regional/customers', {
       params: { region_id: regionId, tariff_type: tariffType, page, page_size: pageSize },
       signal,
+      strict: true,
     }),
 
+  /** status اختیاری: تعمیر شده / تعمیر نشده / در انتظار تایید. page_size حداکثر ۱۰۰. */
   getMaintenance: (
     regionId = 1,
     status?: MaintenanceStatusType,
@@ -257,21 +283,26 @@ export const transbanApi = {
     signal?: AbortSignal,
     page = 1,
   ) =>
-    request<unknown>('/api/v1/regional/maintenance', {
+    request<PaginatedResponse<MaintenanceRecordSchema>>('/api/v1/regional/maintenance', {
       params: { region_id: regionId, status, page, page_size: pageSize },
       signal,
+      strict: true,
     }),
 
+  /** page از ۱؛ page_size حداکثر ۲۰۰. */
   getMeterReadings: (regionId = 1, pageSize = 50, signal?: AbortSignal, page = 1) =>
-    request<unknown>('/api/v1/regional/meter-readings', {
+    request<PaginatedResponse<MeterReadingSchema>>('/api/v1/regional/meter-readings', {
       params: { region_id: regionId, page, page_size: pageSize },
       signal,
+      strict: true,
     }),
 
+  /** page از ۱؛ page_size حداکثر ۲۰۰. */
   getFeederLoads: (regionId = 1, pageSize = 50, signal?: AbortSignal, page = 1) =>
-    request<unknown>('/api/v1/regional/feeder-loads', {
+    request<PaginatedResponse<FeederLoadSchema>>('/api/v1/regional/feeder-loads', {
       params: { region_id: regionId, page, page_size: pageSize },
       signal,
+      strict: true,
     }),
 
   // ——— متدهای جدید سواگر ———

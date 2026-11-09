@@ -1,8 +1,9 @@
-﻿import React, { useState } from 'react';
-import { Wrench, CheckCircle2, Clock, ShieldAlert, Loader2, X } from 'lucide-react';
-import { ApiError, DefectStatusType, transbanApi } from '../services/api';
-import { mapDefects } from '../services/mappers';
+﻿import React, { useEffect, useState } from 'react';
+import { Wrench, CheckCircle2, Clock, ShieldAlert, Loader2, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ApiError, DefectStatusType, MaintenanceStatusType, transbanApi } from '../services/api';
+import { mapDefects, readPage } from '../services/mappers';
 import { toPersianDigits } from '../utils/healthIndex';
+import type { MaintenanceRecordSchema } from '../services/types';
 
 const STATUS_OPTIONS: { value: DefectStatusType; label: string }[] = [
   { value: 'تعمیر نشده', label: 'تعمیر نشده' },
@@ -10,7 +11,11 @@ const STATUS_OPTIONS: { value: DefectStatusType; label: string }[] = [
   { value: 'تعمیر شده', label: 'تعمیر شده' },
 ];
 
+const MAINTENANCE_FILTERS: MaintenanceStatusType[] = ['تعمیر نشده', 'در انتظار تایید', 'تعمیر شده'];
+const MAINTENANCE_PAGE_SIZES = [10, 20, 50];
+
 interface DefectsManagementViewProps {
+  regionId: number;
   defects?: any[];
   maintenance?: any[];
   onSelectTransformerId?: (id: string) => void;
@@ -18,8 +23,8 @@ interface DefectsManagementViewProps {
 }
 
 export const DefectsManagementView: React.FC<DefectsManagementViewProps> = ({
+  regionId,
   defects = [],
-  maintenance = [],
   onSelectTransformerId,
   onRefreshDefects,
 }) => {
@@ -32,6 +37,20 @@ export const DefectsManagementView: React.FC<DefectsManagementViewProps> = ({
   const [savingStatus, setSavingStatus] = useState(false);
   const [statusError, setStatusError] = useState('');
   const [statusNotice, setStatusNotice] = useState('');
+  const [maintFilter, setMaintFilter] = useState<MaintenanceStatusType>('تعمیر نشده');
+  const [maintPage, setMaintPage] = useState(1);
+  const [maintPageSize, setMaintPageSize] = useState(20);
+  const [seenMaintKey, setSeenMaintKey] = useState(`${regionId}:${maintFilter}`);
+  const maintKey = `${regionId}:${maintFilter}`;
+  if (maintKey !== seenMaintKey) {
+    setSeenMaintKey(maintKey);
+    setMaintPage(1);
+  }
+  const [incidents, setIncidents] = useState<MaintenanceRecordSchema[]>([]);
+  const [maintTotal, setMaintTotal] = useState(0);
+  const [maintPages, setMaintPages] = useState(1);
+  const [maintLoading, setMaintLoading] = useState(true);
+  const [maintError, setMaintError] = useState('');
 
   const handleStatusFilter = async (st: DefectStatusType) => {
     setCurrentStatus(st);
@@ -78,6 +97,31 @@ export const DefectsManagementView: React.FC<DefectsManagementViewProps> = ({
       setSavingStatus(false);
     }
   };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setMaintLoading(true);
+    setMaintError('');
+    transbanApi.getMaintenance(regionId, maintFilter, maintPageSize, controller.signal, maintPage)
+      .then((raw) => {
+        if (controller.signal.aborted) return;
+        const result = readPage<MaintenanceRecordSchema>(raw);
+        setIncidents(result.items);
+        setMaintTotal(result.total);
+        setMaintPages(result.totalPages);
+      })
+      .catch((err: unknown) => {
+        if (controller.signal.aborted || (err instanceof DOMException && err.name === 'AbortError')) return;
+        setIncidents([]);
+        setMaintTotal(0);
+        setMaintPages(1);
+        setMaintError(err instanceof ApiError && err.message ? err.message : 'حوادث نت دریافت نشد');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setMaintLoading(false);
+      });
+    return () => controller.abort();
+  }, [regionId, maintFilter, maintPage, maintPageSize]);
 
   const urgentCount = defects.filter((d) => d.severityLabel === 'تعمیر نشده').length;
 
@@ -136,8 +180,8 @@ export const DefectsManagementView: React.FC<DefectsManagementViewProps> = ({
 
         <div className="flex items-center justify-between rounded-2xl border border-[#1e2230] bg-[#11131a] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:border-white/20">
           <div>
-            <div className="text-xs text-slate-400">سوابق حوادث ثبتی PM</div>
-            <div className="text-2xl font-bold font-mono text-amber-400 mt-1">{toPersianDigits(maintenance.length || 18)} <span className="text-xs text-slate-400">واقعه</span></div>
+            <div className="text-xs text-slate-400">حوادث نت با وضعیت {maintFilter}</div>
+            <div className="text-2xl font-bold text-amber-400 mt-1">{toPersianDigits(maintTotal)} <span className="text-xs text-slate-400">واقعه</span></div>
           </div>
           <div className="p-3 bg-amber-500/10 text-amber-400 rounded-xl"><Clock size={24} /></div>
         </div>
@@ -209,6 +253,114 @@ export const DefectsManagementView: React.FC<DefectsManagementViewProps> = ({
         </table>
       </div>
 
+      <section className="space-y-3 rounded-2xl border border-[#1e2230] bg-[#11131a] p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-slate-100">حوادث و خرابی‌های تجهیزات</h3>
+            <p className="mt-1 text-[11px] text-slate-500">فهرست نگهداری از سرور، با فیلتر وضعیت و صفحه‌بندی</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-1">
+            {MAINTENANCE_FILTERS.map((status) => (
+              <button
+                key={status}
+                type="button"
+                onClick={() => setMaintFilter(status)}
+                className={`rounded-full px-3 py-1 text-[11px] ${maintFilter === status ? statusTone(status) : 'text-slate-500 hover:bg-white/5 hover:text-slate-200'}`}
+              >
+                {status}
+              </button>
+            ))}
+            <select
+              value={maintPageSize}
+              onChange={(event) => {
+                setMaintPageSize(Number(event.target.value));
+                setMaintPage(1);
+              }}
+              aria-label="تعداد حادثه در هر صفحه"
+              className="mr-1 h-8 rounded-lg border border-[#1e2230] bg-[#090a0f] px-2 text-[11px] text-slate-200 outline-none"
+            >
+              {MAINTENANCE_PAGE_SIZES.map((size) => (
+                <option key={size} value={size}>{toPersianDigits(size)}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-right text-xs text-slate-300">
+            <thead className="text-[11px] text-slate-500">
+              <tr>
+                <th className="px-2 py-2 font-medium">تجهیز</th>
+                <th className="px-2 py-2 font-medium">نوع حادثه</th>
+                <th className="px-2 py-2 font-medium">اولویت</th>
+                <th className="px-2 py-2 font-medium">وضعیت</th>
+                <th className="px-2 py-2 font-medium">گزارش</th>
+                <th className="px-2 py-2 font-medium">تعمیر</th>
+                <th className="px-2 py-2 font-medium">شرح</th>
+                <th className="px-2 py-2 font-medium">یادداشت رفع نقص</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#1e2230]">
+              {maintLoading && (
+                <tr>
+                  <td colSpan={8} className="px-2 py-8 text-center text-slate-400">
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 size={14} className="animate-spin text-cyan-400" />
+                      در حال دریافت حوادث نت...
+                    </span>
+                  </td>
+                </tr>
+              )}
+              {!maintLoading && maintError && (
+                <tr><td colSpan={8} className="px-2 py-4 text-rose-300">{maintError}</td></tr>
+              )}
+              {!maintLoading && !maintError && incidents.length === 0 && (
+                <tr><td colSpan={8} className="px-2 py-8 text-center text-slate-500">حادثه‌ای با این وضعیت در امور جاری نیست.</td></tr>
+              )}
+              {!maintLoading && !maintError && incidents.map((item) => (
+                <tr key={item.id}>
+                  <td className="px-2 py-2.5">
+                    <div>{item.asset_type || 'تجهیز'}</div>
+                    <div className="text-[10px] text-slate-500">شناسه {toPersianDigits(item.asset_id)}</div>
+                  </td>
+                  <td className="px-2 py-2.5">{item.issue_type}</td>
+                  <td className="px-2 py-2.5"><PriorityBadge priority={item.priority} /></td>
+                  <td className="px-2 py-2.5">
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] ${statusTone(item.status)}`}>{item.status}</span>
+                  </td>
+                  <td className="px-2 py-2.5 text-slate-400">{formatStamp(item.reported_at)}</td>
+                  <td className="px-2 py-2.5 text-slate-400">{item.repaired_at ? formatStamp(item.repaired_at) : '—'}</td>
+                  <td className="max-w-[180px] px-2 py-2.5 text-slate-400">{item.description || '—'}</td>
+                  <td className="max-w-[180px] px-2 py-2.5 text-slate-400">{item.resolution_note || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+          <span>صفحه {toPersianDigits(maintPage)} از {toPersianDigits(maintPages)} · {toPersianDigits(maintTotal)} رکورد</span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              disabled={maintPage <= 1 || maintLoading}
+              onClick={() => setMaintPage((value) => Math.max(1, value - 1))}
+              className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-slate-300 hover:bg-white/5 disabled:opacity-40"
+            >
+              <ChevronRight size={13} /> قبلی
+            </button>
+            <button
+              type="button"
+              disabled={maintPage >= maintPages || maintLoading}
+              onClick={() => setMaintPage((value) => value + 1)}
+              className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-slate-300 hover:bg-white/5 disabled:opacity-40"
+            >
+              بعدی <ChevronLeft size={13} />
+            </button>
+          </div>
+        </div>
+      </section>
+
       {editing && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/80 p-4" dir="rtl">
           <form onSubmit={submitStatus} className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/80 p-5 shadow-2xl backdrop-blur-xl">
@@ -256,3 +408,24 @@ export const DefectsManagementView: React.FC<DefectsManagementViewProps> = ({
     </div>
   );
 };
+
+function formatStamp(value: string) {
+  return toPersianDigits(value.replace('T', ' ').slice(0, 16));
+}
+
+function statusTone(status: string) {
+  if (status === 'تعمیر شده') return 'bg-emerald-500/10 text-emerald-300';
+  if (status === 'در انتظار تایید' || status.includes('انتظار')) return 'bg-amber-500/10 text-amber-300';
+  return 'bg-rose-500/10 text-rose-300';
+}
+
+function PriorityBadge({ priority }: { priority: string }) {
+  const label = priority || 'عادی';
+  const urgent = label.includes('فوری') || label.includes('بحرانی');
+  const tone = urgent
+    ? 'bg-rose-500/10 text-rose-300'
+    : label.includes('متوسط')
+      ? 'bg-amber-500/10 text-amber-300'
+      : 'bg-cyan-500/10 text-cyan-300';
+  return <span className={`rounded-full px-2 py-0.5 text-[10px] ${tone}`}>{label}</span>;
+}
