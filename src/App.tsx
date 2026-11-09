@@ -51,7 +51,13 @@ export default function App({ onLogout }: AppProps) {
   const [activeTab, setActiveTab] = useState<NavTabId>('gis-dashboard');
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState<boolean>(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    try {
+      return localStorage.getItem('transban_theme') !== 'light';
+    } catch {
+      return true;
+    }
+  });
 
   const [regionsList, setRegionsList] = useState(REGIONS);
   const [transformers, setTransformers] = useState<TransformerData[]>(RAW_TRANSFORMERS);
@@ -70,10 +76,6 @@ export default function App({ onLogout }: AppProps) {
   const [alertsError, setAlertsError] = useState('');
   const [acknowledgingId, setAcknowledgingId] = useState<number | null>(null);
   const [alertReload, setAlertReload] = useState(0);
-
-  useEffect(() => {
-    document.documentElement.classList.add('dark');
-  }, []);
 
   // ۱. دریافت امورهای برق
   useEffect(() => {
@@ -236,7 +238,7 @@ export default function App({ onLogout }: AppProps) {
   };
 
   return (
-    <div dir="rtl" className="flex min-h-screen w-full flex-col bg-[#07080b] font-sans text-slate-100">
+    <div dir="rtl" className="flex min-h-screen w-full flex-col bg-slate-100 dark:bg-[#07080b] font-sans text-slate-800 dark:text-slate-100">
       
       {/* Top Bar */}
       <TopBar
@@ -246,13 +248,21 @@ export default function App({ onLogout }: AppProps) {
         criticalAlertCount={activeAlerts.length}
         onOpenAlertDrawer={() => setIsAlertDrawerOpen(true)}
         isDarkMode={isDarkMode}
-        onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
+        onToggleDarkMode={() => {
+          const dark = document.documentElement.classList.toggle('dark');
+          try {
+            localStorage.setItem('transban_theme', dark ? 'dark' : 'light');
+          } catch {
+            /* ذخیرهٔ تم در این محیط در دسترس نیست */
+          }
+          setIsDarkMode(dark);
+        }}
         onToggleSidebar={() => setIsSidebarOpenMobile(true)}
         onLogout={onLogout}
       />
 
       {/* نوار وضعیت برخط سرور OpenAPI توزیع قزوین */}
-      <div className="flex h-6 items-center gap-2 border-b border-[#1e2230] bg-[#07080b] px-4 text-[10px] text-slate-500">
+      <div className="flex h-6 items-center gap-2 border-b border-slate-200 dark:border-[#1e2230] bg-slate-100 dark:bg-[#07080b] px-4 text-[10px] text-slate-500 dark:text-slate-400">
         <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${isApiConnected ? 'bg-emerald-400' : 'bg-cyan-400'}`}></span>
         <span className="truncate">
           {isApiConnected ? 'اتصال برخط به سرور توزیع برق قزوین فعال است' : 'سامانه در حالت آماده‌باش دیسپاچینگ'}

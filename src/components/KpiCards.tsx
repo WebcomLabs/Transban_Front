@@ -81,14 +81,14 @@ function Widget({
   icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
   onClick?: () => void;
 }) {
-  const className = 'flex w-full items-center gap-2 rounded-2xl border border-[#1e2230] bg-[#11131a] px-2.5 py-2 text-right transition hover:border-cyan-400/25';
+  const className = 'flex w-full items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2.5 py-2 text-right transition hover:border-cyan-400/40 dark:border-[#1e2230] dark:bg-[#11131a]';
   const body = (
     <>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[10px] leading-4 text-slate-500">{label}</div>
+        <div className="truncate text-[10px] leading-4 text-slate-500 dark:text-slate-400">{label}</div>
         <div className="mt-0.5 flex items-baseline gap-1">
           <span className={`text-lg font-semibold leading-none tracking-tight ${tone}`}>{value}</span>
-          <span className="truncate text-[10px] text-slate-500">{hint}</span>
+          <span className="truncate text-[10px] text-slate-500 dark:text-slate-400">{hint}</span>
         </div>
       </div>
       <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${chip}`}>

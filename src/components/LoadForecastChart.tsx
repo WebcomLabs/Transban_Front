@@ -122,7 +122,7 @@ export const LoadForecastChart: React.FC<LoadForecastChartProps> = ({
   const peak = points.reduce((max, point) => Math.max(max, point.predictedLoadMw || 0), 0);
 
   return (
-    <div className="flex flex-col rounded-2xl border border-[#1e2230] bg-[#11131a] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:border-white/20">
+    <div className="flex flex-col rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#11131a] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:border-slate-300 dark:hover:border-white/20">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3 dark:border-slate-800/80">
         <div>
           <div className="flex items-center gap-2">
@@ -170,7 +170,7 @@ export const LoadForecastChart: React.FC<LoadForecastChartProps> = ({
           <span className="h-2.5 w-2.5 rounded-full border border-dashed border-emerald-400 bg-emerald-500/20" />
           <span>پیش‌بینی</span>
         </div>
-        <div className="flex items-center gap-1.5 text-slate-500">
+        <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
           <span className="h-2.5 w-2.5 rounded-full bg-slate-400/40" />
           <span>بازه اطمینان</span>
         </div>
@@ -178,7 +178,7 @@ export const LoadForecastChart: React.FC<LoadForecastChartProps> = ({
 
       <div className="relative h-72 w-full pt-3">
         {(listStatus === 'loading' || status === 'loading') && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 text-xs text-slate-400">
+          <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400">
             <Loader2 className="h-4 w-4 animate-spin" />
             در حال دریافت پیش‌بینی بار...
           </div>
@@ -186,9 +186,9 @@ export const LoadForecastChart: React.FC<LoadForecastChartProps> = ({
         {listStatus === 'error' || status === 'error' ? (
           <div className="flex h-full items-center justify-center px-6 text-center text-xs text-rose-400">{error}</div>
         ) : listStatus === 'empty' ? (
-          <div className="flex h-full items-center justify-center text-xs text-slate-400">فیدری برای این امور ثبت نشده است.</div>
+          <div className="flex h-full items-center justify-center text-xs text-slate-500 dark:text-slate-400">فیدری برای این امور ثبت نشده است.</div>
         ) : status === 'empty' ? (
-          <div className="flex h-full items-center justify-center text-xs text-slate-400">برای این فیدر و افق زمانی نقطه‌ای ثبت نشده است.</div>
+          <div className="flex h-full items-center justify-center text-xs text-slate-500 dark:text-slate-400">برای این فیدر و افق زمانی نقطه‌ای ثبت نشده است.</div>
         ) : status === 'ready' ? (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={points} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -228,8 +228,8 @@ export const LoadForecastChart: React.FC<LoadForecastChartProps> = ({
                   if (!active || !payload?.length) return null;
                   const row = payload[0].payload as ChartPoint;
                   return (
-                    <div className="rounded-xl border border-white/10 bg-slate-900/80 p-3 text-right text-xs shadow-xl backdrop-blur-xl">
-                      <div className="flex items-center gap-1.5 font-bold text-slate-200">
+                    <div className="rounded-xl border border-white/10 bg-slate-50 dark:bg-slate-900/80 p-3 text-right text-xs shadow-xl backdrop-blur-xl">
+                      <div className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-200">
                         <Clock className="h-3.5 w-3.5 text-cyan-400" />
                         <span>{label}</span>
                       </div>
@@ -244,7 +244,7 @@ export const LoadForecastChart: React.FC<LoadForecastChartProps> = ({
                           <span>پیش‌بینی:</span>
                           <span className="font-mono font-bold">{formatPersianNumber(row.predictedLoadMw, 3)} MW</span>
                         </div>
-                        <div className="flex items-center justify-between gap-4 text-[10px] text-slate-400">
+                        <div className="flex items-center justify-between gap-4 text-[10px] text-slate-500 dark:text-slate-400">
                           <span>بازه اطمینان:</span>
                           <span className="font-mono">
                             {formatPersianNumber(row.lowerConfidenceMw, 3)} الی {formatPersianNumber(row.upperConfidenceMw, 3)}
@@ -283,7 +283,7 @@ export const LoadForecastChart: React.FC<LoadForecastChartProps> = ({
           {modelName ? `مدل ${modelName}` : 'مدل پیش‌بینی دیسپاچینگ'}
           {peak > 0 ? ` · پیک پیش‌بینی ${formatPersianNumber(peak, 3)} مگاوات` : ''}
         </span>
-        <span className="font-mono text-[11px] text-slate-400">{toPersianDigits(points.length)} نقطه</span>
+        <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400">{toPersianDigits(points.length)} نقطه</span>
       </div>
     </div>
   );

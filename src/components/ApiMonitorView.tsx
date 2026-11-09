@@ -74,12 +74,12 @@ export function ApiMonitorView() {
 
   return (
     <div className="space-y-6" dir="rtl">
-      <div className="flex items-center justify-between bg-slate-900/60 p-5 rounded-2xl border border-slate-800">
+      <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900/60 p-5 rounded-2xl border border-slate-200 dark:border-slate-800">
         <div>
-          <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <Database className="text-cyan-400" /> وضعیت اتصال به ۱۰ وب‌سرویس بک‌اند (ترانسبان)
           </h2>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             تست زنده دریافت داده از وب‌سرویس‌های OpenAPI توزیع برق قزوین
           </p>
         </div>
@@ -93,14 +93,14 @@ export function ApiMonitorView() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {endpoints.map((ep, i) => (
-          <div key={i} className="bg-slate-900/80 p-4 rounded-xl border border-slate-800/80 flex flex-col justify-between">
+          <div key={i} className="bg-slate-50 dark:bg-slate-900/80 p-4 rounded-xl border border-slate-800/80 flex flex-col justify-between">
             <div className="flex items-start justify-between">
               <div>
                 <span className="text-xs px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono font-bold">
                   {ep.method}
                 </span>
-                <h3 className="text-sm font-bold text-slate-200 mt-1.5">{ep.name}</h3>
-                <p className="text-xs text-slate-400 font-mono mt-0.5">{ep.url}</p>
+                <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 mt-1.5">{ep.name}</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">{ep.url}</p>
               </div>
               <div>
                 {ep.status === 'loading' && <Activity className="text-amber-400 animate-spin" size={20} />}
@@ -113,7 +113,7 @@ export function ApiMonitorView() {
               {ep.status === 'success' && (
                 <>
                   <span className="text-emerald-400 font-medium">متصل شد ({ep.count} رکورد)</span>
-                  <span className="text-slate-500 font-mono">{ep.duration}ms</span>
+                  <span className="text-slate-500 dark:text-slate-400 font-mono">{ep.duration}ms</span>
                 </>
               )}
               {ep.status === 'error' && (

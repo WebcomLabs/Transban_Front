@@ -128,19 +128,19 @@ export const DefectsManagementView: React.FC<DefectsManagementViewProps> = ({
   return (
     <div className="space-y-6" dir="rtl">
       {/* هدر ماژول نت */}
-      <div className="rounded-2xl border border-[#1e2230] bg-[#11131a] shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:border-white/20 p-5 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#11131a] shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:border-slate-300 dark:hover:border-white/20 p-5 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <Wrench className="text-rose-400" size={22} />
-            <h2 className="text-lg font-bold text-slate-100">کارتابل مدیریت عیوب و حوادث نگهداری و تعمیرات (PM)</h2>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">کارتابل مدیریت عیوب و حوادث نگهداری و تعمیرات (PM)</h2>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             پایش عیوب فعال شبکه توزیع برق قزوین و صدور دستور کار برای اکیپ‌های تعمیراتی
           </p>
         </div>
 
         {/* فیلترهای استخراج شده از مشخصات Swagger */}
-        <div className="flex items-center gap-2 bg-slate-900/90 p-1.5 rounded-xl border border-slate-800 text-xs">
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900/90 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
           <button
             onClick={() => handleStatusFilter('تعمیر نشده')}
             className={`px-3 py-1.5 rounded-lg font-bold transition ${currentStatus === 'تعمیر نشده' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'text-slate-400 hover:text-slate-200'}`}
@@ -170,35 +170,35 @@ export const DefectsManagementView: React.FC<DefectsManagementViewProps> = ({
 
       {/* کارتهای آماری */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="flex items-center justify-between rounded-2xl border border-[#1e2230] bg-[#11131a] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:border-white/20">
+        <div className="flex items-center justify-between rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#11131a] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:border-slate-300 dark:hover:border-white/20">
           <div>
-            <div className="text-xs text-slate-400">کل عیوب در وضعیت {currentStatus}</div>
-            <div className="text-2xl font-bold font-mono text-white mt-1">{toPersianDigits(defects.length)} <span className="text-xs text-slate-400">رکورد</span></div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">کل عیوب در وضعیت {currentStatus}</div>
+            <div className="text-2xl font-bold font-mono text-slate-800 dark:text-white mt-1">{toPersianDigits(defects.length)} <span className="text-xs text-slate-500 dark:text-slate-400">رکورد</span></div>
           </div>
           <div className="p-3 bg-rose-500/10 text-rose-400 rounded-xl"><ShieldAlert size={24} /></div>
         </div>
 
-        <div className="flex items-center justify-between rounded-2xl border border-[#1e2230] bg-[#11131a] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:border-white/20">
+        <div className="flex items-center justify-between rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#11131a] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:border-slate-300 dark:hover:border-white/20">
           <div>
-            <div className="text-xs text-slate-400">حوادث نت با وضعیت {maintFilter}</div>
-            <div className="text-2xl font-bold text-amber-400 mt-1">{toPersianDigits(maintTotal)} <span className="text-xs text-slate-400">واقعه</span></div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">حوادث نت با وضعیت {maintFilter}</div>
+            <div className="text-2xl font-bold text-amber-400 mt-1">{toPersianDigits(maintTotal)} <span className="text-xs text-slate-500 dark:text-slate-400">واقعه</span></div>
           </div>
           <div className="p-3 bg-amber-500/10 text-amber-400 rounded-xl"><Clock size={24} /></div>
         </div>
 
-        <div className="flex items-center justify-between rounded-2xl border border-[#1e2230] bg-[#11131a] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:border-white/20">
+        <div className="flex items-center justify-between rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#11131a] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:border-slate-300 dark:hover:border-white/20">
           <div>
-            <div className="text-xs text-slate-400">اکیپ‌های ویژه فعال</div>
-            <div className="text-2xl font-bold font-mono text-emerald-400 mt-1">۸ <span className="text-xs text-slate-400">اکیپ خط گرم و سرد</span></div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">اکیپ‌های ویژه فعال</div>
+            <div className="text-2xl font-bold font-mono text-emerald-400 mt-1">۸ <span className="text-xs text-slate-500 dark:text-slate-400">اکیپ خط گرم و سرد</span></div>
           </div>
           <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl"><CheckCircle2 size={24} /></div>
         </div>
       </div>
 
       {/* جدول عیوب و دستور کارها */}
-      <div className="rounded-2xl border border-[#1e2230] bg-[#11131a] shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:border-white/20 p-5 shadow-xl overflow-x-auto">
+      <div className="rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#11131a] shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:border-slate-300 dark:hover:border-white/20 p-5 shadow-xl overflow-x-auto">
         <table className="w-full text-right text-xs">
-          <thead className="bg-slate-900/60 text-slate-400 border-b border-slate-800">
+          <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
             <tr>
               <th className="py-3 px-4">کد عیب</th>
               <th className="py-3 px-4">ترانسفورماتور</th>
@@ -210,28 +210,28 @@ export const DefectsManagementView: React.FC<DefectsManagementViewProps> = ({
               <th className="py-3 px-4">اقدام</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/60 text-slate-300">
+          <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-slate-600 dark:text-slate-300">
             {listError && (
               <tr><td colSpan={8} className="px-4 py-3 text-rose-300">{listError}</td></tr>
             )}
             {loading ? (
-              <tr><td colSpan={8} className="text-center py-8 text-slate-400">در حال دریافت داده‌های زنده از سرور دیسپاچینگ...</td></tr>
+              <tr><td colSpan={8} className="text-center py-8 text-slate-500 dark:text-slate-400">در حال دریافت داده‌های زنده از سرور دیسپاچینگ...</td></tr>
             ) : defects.length === 0 ? (
-              <tr><td colSpan={8} className="text-center py-8 text-slate-500">موردی با این وضعیت یافت نشد.</td></tr>
+              <tr><td colSpan={8} className="text-center py-8 text-slate-500 dark:text-slate-400">موردی با این وضعیت یافت نشد.</td></tr>
             ) : (
               defects.map((d: any, idx: number) => (
                 <tr key={idx} className="hover:bg-slate-800/40 transition">
-                  <td className="py-3.5 px-4 font-mono text-slate-400">{d.id}</td>
+                  <td className="py-3.5 px-4 font-mono text-slate-500 dark:text-slate-400">{d.id}</td>
                   <td
-                    className="py-3.5 px-4 font-bold text-white cursor-pointer hover:text-cyan-400"
+                    className="py-3.5 px-4 font-bold text-slate-800 dark:text-white cursor-pointer hover:text-cyan-400"
                     onClick={() => onSelectTransformerId && onSelectTransformerId(d.id)}
                   >
                     {d.transformerName}
                   </td>
-                  <td className="py-3.5 px-4 text-slate-300">{d.regionName}</td>
+                  <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">{d.regionName}</td>
                   <td className="py-3.5 px-4">{d.category}</td>
                   <td className="py-3.5 px-4 text-cyan-300">{d.assignedTeam}</td>
-                  <td className="py-3.5 px-4 font-mono text-slate-400">{toPersianDigits(d.reportedDate)}</td>
+                  <td className="py-3.5 px-4 font-mono text-slate-500 dark:text-slate-400">{toPersianDigits(d.reportedDate)}</td>
                   <td className="py-3.5 px-4">
                     <span className={`px-2.5 py-1 rounded text-[11px] font-bold ${d.severityLabel === 'تعمیر نشده' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : d.severityLabel === 'تعمیر شده' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'}`}>
                       {d.severityLabel}
@@ -253,11 +253,11 @@ export const DefectsManagementView: React.FC<DefectsManagementViewProps> = ({
         </table>
       </div>
 
-      <section className="space-y-3 rounded-2xl border border-[#1e2230] bg-[#11131a] p-4">
+      <section className="space-y-3 rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#11131a] p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h3 className="text-sm font-bold text-slate-100">حوادث و خرابی‌های تجهیزات</h3>
-            <p className="mt-1 text-[11px] text-slate-500">فهرست نگهداری از سرور، با فیلتر وضعیت و صفحه‌بندی</p>
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">حوادث و خرابی‌های تجهیزات</h3>
+            <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">فهرست نگهداری از سرور، با فیلتر وضعیت و صفحه‌بندی</p>
           </div>
           <div className="flex flex-wrap items-center gap-1">
             {MAINTENANCE_FILTERS.map((status) => (
@@ -277,7 +277,7 @@ export const DefectsManagementView: React.FC<DefectsManagementViewProps> = ({
                 setMaintPage(1);
               }}
               aria-label="تعداد حادثه در هر صفحه"
-              className="mr-1 h-8 rounded-lg border border-[#1e2230] bg-[#090a0f] px-2 text-[11px] text-slate-200 outline-none"
+              className="mr-1 h-8 rounded-lg border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#090a0f] px-2 text-[11px] text-slate-700 dark:text-slate-200 outline-none"
             >
               {MAINTENANCE_PAGE_SIZES.map((size) => (
                 <option key={size} value={size}>{toPersianDigits(size)}</option>
@@ -287,8 +287,8 @@ export const DefectsManagementView: React.FC<DefectsManagementViewProps> = ({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-right text-xs text-slate-300">
-            <thead className="text-[11px] text-slate-500">
+          <table className="w-full text-right text-xs text-slate-600 dark:text-slate-300">
+            <thead className="text-[11px] text-slate-500 dark:text-slate-400">
               <tr>
                 <th className="px-2 py-2 font-medium">تجهیز</th>
                 <th className="px-2 py-2 font-medium">نوع حادثه</th>
@@ -300,10 +300,10 @@ export const DefectsManagementView: React.FC<DefectsManagementViewProps> = ({
                 <th className="px-2 py-2 font-medium">یادداشت رفع نقص</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#1e2230]">
+            <tbody className="divide-y divide-slate-200 dark:divide-[#1e2230]">
               {maintLoading && (
                 <tr>
-                  <td colSpan={8} className="px-2 py-8 text-center text-slate-400">
+                  <td colSpan={8} className="px-2 py-8 text-center text-slate-500 dark:text-slate-400">
                     <span className="inline-flex items-center gap-2">
                       <Loader2 size={14} className="animate-spin text-cyan-400" />
                       در حال دریافت حوادث نت...
@@ -315,37 +315,37 @@ export const DefectsManagementView: React.FC<DefectsManagementViewProps> = ({
                 <tr><td colSpan={8} className="px-2 py-4 text-rose-300">{maintError}</td></tr>
               )}
               {!maintLoading && !maintError && incidents.length === 0 && (
-                <tr><td colSpan={8} className="px-2 py-8 text-center text-slate-500">حادثه‌ای با این وضعیت در امور جاری نیست.</td></tr>
+                <tr><td colSpan={8} className="px-2 py-8 text-center text-slate-500 dark:text-slate-400">حادثه‌ای با این وضعیت در امور جاری نیست.</td></tr>
               )}
               {!maintLoading && !maintError && incidents.map((item) => (
                 <tr key={item.id}>
                   <td className="px-2 py-2.5">
                     <div>{item.asset_type || 'تجهیز'}</div>
-                    <div className="text-[10px] text-slate-500">شناسه {toPersianDigits(item.asset_id)}</div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400">شناسه {toPersianDigits(item.asset_id)}</div>
                   </td>
                   <td className="px-2 py-2.5">{item.issue_type}</td>
                   <td className="px-2 py-2.5"><PriorityBadge priority={item.priority} /></td>
                   <td className="px-2 py-2.5">
                     <span className={`rounded-full px-2 py-0.5 text-[10px] ${statusTone(item.status)}`}>{item.status}</span>
                   </td>
-                  <td className="px-2 py-2.5 text-slate-400">{formatStamp(item.reported_at)}</td>
-                  <td className="px-2 py-2.5 text-slate-400">{item.repaired_at ? formatStamp(item.repaired_at) : '—'}</td>
-                  <td className="max-w-[180px] px-2 py-2.5 text-slate-400">{item.description || '—'}</td>
-                  <td className="max-w-[180px] px-2 py-2.5 text-slate-400">{item.resolution_note || '—'}</td>
+                  <td className="px-2 py-2.5 text-slate-500 dark:text-slate-400">{formatStamp(item.reported_at)}</td>
+                  <td className="px-2 py-2.5 text-slate-500 dark:text-slate-400">{item.repaired_at ? formatStamp(item.repaired_at) : '—'}</td>
+                  <td className="max-w-[180px] px-2 py-2.5 text-slate-500 dark:text-slate-400">{item.description || '—'}</td>
+                  <td className="max-w-[180px] px-2 py-2.5 text-slate-500 dark:text-slate-400">{item.resolution_note || '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400">
           <span>صفحه {toPersianDigits(maintPage)} از {toPersianDigits(maintPages)} · {toPersianDigits(maintTotal)} رکورد</span>
           <div className="flex items-center gap-1">
             <button
               type="button"
               disabled={maintPage <= 1 || maintLoading}
               onClick={() => setMaintPage((value) => Math.max(1, value - 1))}
-              className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-slate-300 hover:bg-white/5 disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 disabled:opacity-40"
             >
               <ChevronRight size={13} /> قبلی
             </button>
@@ -353,7 +353,7 @@ export const DefectsManagementView: React.FC<DefectsManagementViewProps> = ({
               type="button"
               disabled={maintPage >= maintPages || maintLoading}
               onClick={() => setMaintPage((value) => value + 1)}
-              className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-slate-300 hover:bg-white/5 disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 disabled:opacity-40"
             >
               بعدی <ChevronLeft size={13} />
             </button>
@@ -362,35 +362,35 @@ export const DefectsManagementView: React.FC<DefectsManagementViewProps> = ({
       </section>
 
       {editing && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/80 p-4" dir="rtl">
-          <form onSubmit={submitStatus} className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/80 p-5 shadow-2xl backdrop-blur-xl">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-100/80 dark:bg-slate-950/80 p-4" dir="rtl">
+          <form onSubmit={submitStatus} className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-50 dark:bg-slate-900/80 p-5 shadow-2xl backdrop-blur-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-100">تغییر وضعیت عیب {editing.id}</h3>
-              <button type="button" onClick={() => setEditing(null)} aria-label="بستن" className="text-slate-400 hover:text-white">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">تغییر وضعیت عیب {editing.id}</h3>
+              <button type="button" onClick={() => setEditing(null)} aria-label="بستن" className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
                 <X size={18} />
               </button>
             </div>
-            <p className="mb-4 text-xs text-slate-400">{editing.transformerName} · {editing.category}</p>
-            <label className="mb-3 block text-xs text-slate-300">
+            <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">{editing.transformerName} · {editing.category}</p>
+            <label className="mb-3 block text-xs text-slate-600 dark:text-slate-300">
               وضعیت جدید
               <select
                 value={nextStatus}
                 onChange={(event) => setNextStatus(event.target.value as DefectStatusType)}
-                className="mt-1 h-10 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm text-slate-100 outline-none focus:border-cyan-500"
+                className="mt-1 h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm text-slate-800 dark:text-slate-100 outline-none focus:border-cyan-500"
               >
                 {STATUS_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
             </label>
-            <label className="mb-3 block text-xs text-slate-300">
+            <label className="mb-3 block text-xs text-slate-600 dark:text-slate-300">
               یادداشت رفع نقص
               <textarea
                 value={resolutionNote}
                 onChange={(event) => setResolutionNote(event.target.value)}
                 rows={3}
                 placeholder="شرح اقدام انجام‌شده"
-                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-500"
+                className="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 outline-none focus:border-cyan-500"
               />
             </label>
             {statusError && <p className="mb-3 text-xs text-rose-300">{statusError}</p>}

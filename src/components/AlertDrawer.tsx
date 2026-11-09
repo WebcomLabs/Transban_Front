@@ -38,7 +38,7 @@ export const AlertDrawer: React.FC<AlertDrawerProps> = ({
         className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs transition-opacity"
       />
 
-      <div className="fixed inset-y-0 left-0 z-[9999] flex w-full max-w-md flex-col border-r border-[#1e2230] bg-[#090a0f] text-right">
+      <div className="fixed inset-y-0 left-0 z-[9999] flex w-full max-w-md flex-col border-r border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#090a0f] text-right">
         <div className="flex items-center justify-between border-b border-white/10 p-4">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400">
@@ -48,7 +48,7 @@ export const AlertDrawer: React.FC<AlertDrawerProps> = ({
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                 هشدارهای فعال دیسپاچینگ
               </h3>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 {toPersianDigits(alerts.length)} هشدار خوانده‌نشده
               </p>
             </div>
@@ -66,7 +66,7 @@ export const AlertDrawer: React.FC<AlertDrawerProps> = ({
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {status === 'loading' && alerts.length === 0 && (
-            <p className="py-12 text-center text-xs text-slate-400">در حال دریافت هشدارهای دیسپاچینگ...</p>
+            <p className="py-12 text-center text-xs text-slate-500 dark:text-slate-400">در حال دریافت هشدارهای دیسپاچینگ...</p>
           )}
           {error && (
             <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-600 dark:text-rose-300">
@@ -74,7 +74,7 @@ export const AlertDrawer: React.FC<AlertDrawerProps> = ({
             </p>
           )}
           {status !== 'loading' && !error && alerts.length === 0 && (
-            <p className="py-12 text-center text-xs text-slate-400">هشدار فعال تاییدنشده‌ای وجود ندارد.</p>
+            <p className="py-12 text-center text-xs text-slate-500 dark:text-slate-400">هشدار فعال تاییدنشده‌ای وجود ندارد.</p>
           )}
           {alerts.map((alert) => {
             const pending = acknowledgingId === alert.id;
@@ -92,7 +92,7 @@ export const AlertDrawer: React.FC<AlertDrawerProps> = ({
                     #{toPersianDigits(alert.id)}
                   </span>
                 </div>
-                <div className="mt-2 text-[10px] text-slate-500">
+                <div className="mt-2 text-[10px] text-slate-500 dark:text-slate-400">
                   {alert.asset_type} {toPersianDigits(alert.asset_id)} · {toPersianDigits(alert.created_at)}
                 </div>
                 <div className="mt-3 flex items-center justify-between border-t border-rose-500/20 pt-2.5">
@@ -123,7 +123,7 @@ export const AlertDrawer: React.FC<AlertDrawerProps> = ({
           })}
         </div>
 
-        <div className="border-t border-slate-200 bg-slate-50 p-4 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900/50">
+        <div className="border-t border-slate-200 bg-slate-50 p-4 text-xs text-slate-500 dark:text-slate-400 dark:border-slate-800 dark:bg-slate-900/50">
           {status === 'loading' && alerts.length > 0 ? 'در حال به‌روزرسانی فهرست هشدارها...' : 'هشدارهای تاییدنشده دیسپاچینگ'}
         </div>
       </div>

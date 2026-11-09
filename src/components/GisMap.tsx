@@ -131,7 +131,7 @@ export const GisMap: React.FC<GisMapProps> = ({
       const subIcon = L.divIcon({
         className: 'sub-icon',
         html: `
-          <div class="flex h-6 w-6 items-center justify-center rounded-full border border-cyan-300/40 bg-[#090a0f] text-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.45)]">
+          <div class="flex h-6 w-6 items-center justify-center rounded-full border border-cyan-300/40 bg-white dark:bg-[#090a0f] text-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.45)]">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
           </div>
         `,
@@ -141,7 +141,7 @@ export const GisMap: React.FC<GisMapProps> = ({
 
       const marker = L.marker([sub.lat, sub.lng], { icon: subIcon });
       marker.bindTooltip(
-        `<div class="p-1.5 text-xs font-sans text-slate-100 font-bold bg-slate-900 rounded-lg border border-slate-700" dir="rtl">${sub.name}<br/><span class="text-cyan-400 font-mono text-[10px] font-normal">${sub.kv}</span></div>`,
+        `<div class="p-1.5 text-xs font-sans text-slate-800 dark:text-slate-100 font-bold bg-white dark:bg-slate-900 rounded-lg border border-slate-300 dark:border-slate-700" dir="rtl">${sub.name}<br/><span class="text-cyan-400 font-mono text-[10px] font-normal">${sub.kv}</span></div>`,
         { sticky: true }
       );
       marker.addTo(substationsLayerRef.current!);
@@ -252,7 +252,7 @@ export const GisMap: React.FC<GisMapProps> = ({
               ${Math.round(healthIndex)}
             </div>
             ${isDeepZoom ? `
-              <div class="mt-1 whitespace-nowrap rounded-full border border-[#1e2230] bg-[#11131a]/95 px-2 py-0.5 text-[9px] font-medium text-slate-200">
+              <div class="mt-1 whitespace-nowrap rounded-full border border-slate-200 dark:border-[#1e2230] bg-white/95 dark:bg-[#11131a]/95 px-2 py-0.5 text-[9px] font-medium text-slate-700 dark:text-slate-200">
                 ${t.name}
               </div>
             ` : ''}
@@ -268,16 +268,16 @@ export const GisMap: React.FC<GisMapProps> = ({
       popupContent.dir = 'rtl';
       popupContent.className = 'font-sans text-xs space-y-2 p-1 text-slate-100 min-w-[210px]';
       popupContent.innerHTML = `
-        <div class="flex items-center justify-between border-b border-slate-700 pb-1.5">
+        <div class="flex items-center justify-between border-b border-slate-300 dark:border-slate-700 pb-1.5">
           <span class="font-bold text-sm text-cyan-400">${t.name}</span>
           <span class="text-[10px] font-mono px-1.5 py-0.5 rounded ${status === 'critical' ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'}">
             HI: ${Math.round(healthIndex)}%
           </span>
         </div>
-        <div class="grid grid-cols-2 gap-1 text-[11px] text-slate-300">
-          <div>ظرفیت: <b class="font-mono text-white">${t.capacityKva} kVA</b></div>
+        <div class="grid grid-cols-2 gap-1 text-[11px] text-slate-600 dark:text-slate-300">
+          <div>ظرفیت: <b class="font-mono text-slate-800 dark:text-white">${t.capacityKva} kVA</b></div>
           <div>بار لحظه‌ای: <b class="font-mono ${t.currentLoadPercent > 100 ? 'text-rose-400 font-bold' : 'text-emerald-400'}">${t.currentLoadPercent}%</b></div>
-          <div>سریال: <span class="font-mono text-[10px] text-slate-400">${t.serialNumber}</span></div>
+          <div>سریال: <span class="font-mono text-[10px] text-slate-500 dark:text-slate-400">${t.serialNumber}</span></div>
           <div>ریسک خرابی: <b class="font-mono text-amber-400">${t.failureRisk30d}%</b></div>
         </div>
         <button id="btn-modal-${t.id}" class="mt-2 w-full rounded-full bg-cyan-500/15 py-1.5 text-center text-xs font-semibold text-cyan-300">
@@ -297,28 +297,28 @@ export const GisMap: React.FC<GisMapProps> = ({
   }, [transformers, showSubstations, filterStatus, selectedTransformer, currentZoom]);
 
   return (
-    <div className="relative h-full min-h-[560px] w-full overflow-hidden rounded-3xl border border-[#1e2230] bg-[#090a0f]">
+    <div className="relative h-full min-h-[560px] w-full overflow-hidden rounded-3xl border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#090a0f]">
       <div ref={mapContainerRef} className="w-full h-full z-0" />
 
       {caption && (
-        <div className="pointer-events-none absolute right-3 top-3 z-[400] rounded-full border border-[#1e2230] bg-[#090a0f]/80 px-3 py-1 text-[11px] text-slate-300 backdrop-blur-md">
+        <div className="pointer-events-none absolute right-3 top-3 z-[400] rounded-full border border-slate-200 dark:border-[#1e2230] bg-white/80 dark:bg-[#090a0f]/80 px-3 py-1 text-[11px] text-slate-600 dark:text-slate-300 backdrop-blur-md">
           <span className="ml-2 font-mono text-[10px] tracking-widest text-emerald-400">GIS</span>
           {caption}
         </div>
       )}
 
       {showFeeders && feederStatus === 'loading' && (
-        <div className="absolute bottom-4 left-4 z-[400] rounded-full border border-[#1e2230] bg-[#090a0f]/85 px-3 py-1.5 text-[11px] text-slate-300">
+        <div className="absolute bottom-4 left-4 z-[400] rounded-full border border-slate-200 dark:border-[#1e2230] bg-white/85 dark:bg-[#090a0f]/85 px-3 py-1.5 text-[11px] text-slate-600 dark:text-slate-300">
           در حال بارگذاری خطوط فیدر...
         </div>
       )}
       {showFeeders && feederStatus === 'error' && (
-        <div className="absolute bottom-4 left-4 z-[400] max-w-xs rounded-full border border-rose-400/30 bg-[#090a0f]/90 px-3 py-1.5 text-[11px] text-rose-300">
+        <div className="absolute bottom-4 left-4 z-[400] max-w-xs rounded-full border border-rose-400/30 bg-white/90 dark:bg-[#090a0f]/90 px-3 py-1.5 text-[11px] text-rose-300">
           {feederError}
         </div>
       )}
       {feederStatus === 'ready' && showFeeders && (feederNetwork?.features?.length ?? 0) === 0 && (
-        <div className="absolute bottom-4 left-4 z-[400] rounded-full border border-[#1e2230] bg-[#090a0f]/85 px-3 py-1.5 text-[11px] text-slate-300">
+        <div className="absolute bottom-4 left-4 z-[400] rounded-full border border-slate-200 dark:border-[#1e2230] bg-white/85 dark:bg-[#090a0f]/85 px-3 py-1.5 text-[11px] text-slate-600 dark:text-slate-300">
           خطی برای این امور در شبکه فیدر ثبت نشده است.
         </div>
       )}
@@ -326,20 +326,20 @@ export const GisMap: React.FC<GisMapProps> = ({
         <button
           type="button"
           onClick={() => setActiveFeederKey(null)}
-          className="absolute bottom-4 right-3 z-[400] max-w-[70%] truncate rounded-full border border-cyan-400/30 bg-[#090a0f]/90 px-3 py-1.5 text-[11px] text-cyan-200"
+          className="absolute bottom-4 right-3 z-[400] max-w-[70%] truncate rounded-full border border-cyan-400/30 bg-white/90 dark:bg-[#090a0f]/90 px-3 py-1.5 text-[11px] text-cyan-200"
         >
           {activeFeederName} · برداشتن درخشش
         </button>
       )}
 
       <div className="absolute inset-x-3 top-3 z-[400] flex flex-col items-start gap-1.5">
-        <div className="flex max-w-full flex-wrap items-center gap-0.5 rounded-2xl border border-[#1e2230] bg-[#090a0f]/88 p-1 shadow-lg backdrop-blur-md">
+        <div className="flex max-w-full flex-wrap items-center gap-0.5 rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white/88 dark:bg-[#090a0f]/88 p-1 shadow-lg backdrop-blur-md">
           <MapChip active={filterStatus === 'all'} onClick={() => setFilterStatus('all')}>همه {transformers.length}</MapChip>
           <MapChip active={filterStatus === 'critical'} tone="rose" onClick={() => setFilterStatus('critical')}>بحرانی</MapChip>
           <MapChip active={filterStatus === 'warning'} tone="amber" onClick={() => setFilterStatus('warning')}>هشدار</MapChip>
           <MapChip active={filterStatus === 'healthy'} tone="emerald" onClick={() => setFilterStatus('healthy')}>مطلوب</MapChip>
         </div>
-        <div className="flex max-w-full flex-wrap items-center gap-0.5 rounded-2xl border border-[#1e2230] bg-[#090a0f]/88 p-1 shadow-lg backdrop-blur-md">
+        <div className="flex max-w-full flex-wrap items-center gap-0.5 rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white/88 dark:bg-[#090a0f]/88 p-1 shadow-lg backdrop-blur-md">
           <MapChip active={showSubstations} onClick={() => setShowSubstations(!showSubstations)}>
             <Zap size={12} strokeWidth={1.75} /> پست
           </MapChip>
@@ -404,7 +404,7 @@ function MapChip({
       type="button"
       onClick={onClick}
       className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all duration-300 ${
-        active ? activeTone : 'border-transparent text-slate-500 hover:bg-white/5 hover:text-slate-200'
+        active ? activeTone : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-200'
       }`}
     >
       {children}

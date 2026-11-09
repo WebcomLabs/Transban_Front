@@ -42,7 +42,7 @@ export const HealthIndexPieChart: React.FC<HealthIndexPieChartProps> = ({ transf
   ];
 
   return (
-    <div className="flex flex-col justify-between rounded-2xl border border-[#1e2230] bg-[#11131a] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:border-white/20">
+    <div className="flex flex-col justify-between rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#11131a] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:border-slate-300 dark:hover:border-white/20">
       {/* Header */}
       <div className="border-b border-slate-100 pb-3 dark:border-slate-800/80">
         <div className="flex items-center justify-between">
@@ -67,15 +67,15 @@ export const HealthIndexPieChart: React.FC<HealthIndexPieChartProps> = ({ transf
                 if (active && payload && payload.length) {
                   const item = payload[0].payload;
                   return (
-                    <div className="rounded-xl border border-white/10 bg-slate-900/80 p-2.5 text-right text-xs shadow-xl backdrop-blur-xl">
+                    <div className="rounded-xl border border-white/10 bg-slate-50 dark:bg-slate-900/80 p-2.5 text-right text-xs shadow-xl backdrop-blur-xl">
                       <div className="font-bold" style={{ color: item.color }}>
                         {item.name}
                       </div>
-                      <div className="mt-1 flex items-center justify-between gap-3 text-slate-300">
+                      <div className="mt-1 flex items-center justify-between gap-3 text-slate-600 dark:text-slate-300">
                         <span>تعداد دستگاه:</span>
                         <span className="font-mono font-bold">{toPersianDigits(item.value)} ترانس</span>
                       </div>
-                      <div className="flex items-center justify-between gap-3 text-slate-300">
+                      <div className="flex items-center justify-between gap-3 text-slate-600 dark:text-slate-300">
                         <span>سهم از کل ناوگان:</span>
                         <span className="font-mono font-bold">{toPersianDigits(item.percent)}٪</span>
                       </div>
@@ -119,7 +119,7 @@ export const HealthIndexPieChart: React.FC<HealthIndexPieChartProps> = ({ transf
           </div>
           <div className="flex items-center gap-2 font-mono">
             <span className="font-bold text-emerald-600 dark:text-emerald-400">{toPersianDigits(normalCount)} ترانس</span>
-            <span className="text-slate-400">({toPersianDigits(normalPercent)}٪)</span>
+            <span className="text-slate-500 dark:text-slate-400">({toPersianDigits(normalPercent)}٪)</span>
           </div>
         </div>
 
@@ -130,7 +130,7 @@ export const HealthIndexPieChart: React.FC<HealthIndexPieChartProps> = ({ transf
           </div>
           <div className="flex items-center gap-2 font-mono">
             <span className="font-bold text-amber-600 dark:text-amber-400">{toPersianDigits(warningCount)} ترانس</span>
-            <span className="text-slate-400">({toPersianDigits(warningPercent)}٪)</span>
+            <span className="text-slate-500 dark:text-slate-400">({toPersianDigits(warningPercent)}٪)</span>
           </div>
         </div>
 
@@ -141,7 +141,7 @@ export const HealthIndexPieChart: React.FC<HealthIndexPieChartProps> = ({ transf
           </div>
           <div className="flex items-center gap-2 font-mono">
             <span className="font-bold text-rose-600 dark:text-rose-400">{toPersianDigits(criticalCount)} ترانس</span>
-            <span className="text-slate-400">({toPersianDigits(criticalPercent)}٪)</span>
+            <span className="text-slate-500 dark:text-slate-400">({toPersianDigits(criticalPercent)}٪)</span>
           </div>
         </div>
       </div>

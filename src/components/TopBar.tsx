@@ -71,29 +71,29 @@ export const TopBar: React.FC<TopBarProps> = ({
     : '';
 
   return (
-    <header className="sticky top-0 z-30 h-11 w-full border-b border-[#1e2230] bg-[#090a0f] px-3">
+    <header className="sticky top-0 z-30 h-11 w-full border-b border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#090a0f] px-3">
       <div className="flex h-full items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <button
             onClick={onToggleSidebar}
             aria-label="تغییر وضعیت منوی کناری"
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/5 hover:text-slate-100 md:hidden"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 transition hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-slate-100 md:hidden"
           >
             <Menu className="h-4 w-4" />
           </button>
           <span className="text-sm text-emerald-400">⚡</span>
-          <span className="truncate text-sm font-semibold text-slate-100">سامانه ترانسبان</span>
-          <span className="hidden text-[10px] text-slate-500 sm:inline">۴٫۲</span>
+          <span className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">سامانه ترانسبان</span>
+          <span className="hidden text-[10px] text-slate-500 dark:text-slate-400 sm:inline">۴٫۲</span>
         </div>
 
         <div className="flex min-w-0 flex-1 items-center justify-center gap-3">
           <div className="relative flex w-full min-w-0 max-w-[220px] items-center">
-            <MapPin className="pointer-events-none absolute right-1.5 h-3.5 w-3.5 text-slate-500" />
+            <MapPin className="pointer-events-none absolute right-1.5 h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
             <select
               value={selectedRegionId}
               onChange={(e) => onSelectRegion(e.target.value)}
               aria-label="انتخاب امور برق استان قزوین"
-              className="h-7 w-full truncate rounded-lg bg-transparent pr-6 pl-1 text-xs text-slate-300 outline-none transition hover:bg-white/5 focus:bg-white/5"
+              className="h-7 w-full truncate rounded-lg bg-transparent pr-6 pl-1 text-xs text-slate-600 dark:text-slate-300 outline-none transition hover:bg-slate-100 dark:hover:bg-white/5 focus:bg-white/5"
             >
               {regions.map((region) => (
                 <option key={region.id} value={region.id}>
@@ -121,18 +121,18 @@ export const TopBar: React.FC<TopBarProps> = ({
           <button
             onClick={onToggleDarkMode}
             aria-label={isDarkMode ? 'تغییر به حالت روشن' : 'تغییر به حالت تاریک'}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/5 hover:text-slate-100"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 transition hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-800 dark:hover:text-slate-100"
           >
-            {isDarkMode ? <Sun className="h-3.5 w-3.5 text-amber-300" /> : <Moon className="h-3.5 w-3.5" />}
+            {isDarkMode ? <Sun className="h-3.5 w-3.5 text-amber-300" /> : <Moon className="h-3.5 w-3.5 text-slate-700" />}
           </button>
 
           <div className="hidden max-w-[180px] items-center gap-1.5 px-1.5 text-right md:flex">
-            <UserCheck className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+            <UserCheck className="h-3.5 w-3.5 shrink-0 text-slate-500 dark:text-slate-400" />
             <div className="min-w-0">
-              <div className="truncate text-[11px] text-slate-200">
+              <div className="truncate text-[11px] text-slate-700 dark:text-slate-200">
                 {userStatus === 'loading' ? 'در حال دریافت...' : currentUser?.full_name || 'کاربر سامانه'}
               </div>
-              <div className="truncate text-[10px] text-slate-500">
+              <div className="truncate text-[10px] text-slate-500 dark:text-slate-400">
                 {userStatus === 'error'
                   ? 'مشخصات کاربر در دسترس نیست'
                   : currentUser
@@ -146,7 +146,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             type="button"
             onClick={onLogout}
             aria-label="خروج از سامانه"
-            className="flex h-7 items-center gap-1 rounded-lg px-1.5 text-[11px] text-slate-400 transition hover:bg-white/5 hover:text-rose-300"
+            className="flex h-7 items-center gap-1 rounded-lg px-1.5 text-[11px] text-slate-500 dark:text-slate-400 transition hover:bg-slate-100 dark:hover:bg-white/5 hover:text-rose-300"
           >
             <LogOut className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">خروج</span>

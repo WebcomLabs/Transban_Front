@@ -191,18 +191,18 @@ export const LoadAnalyticsView: React.FC<LoadAnalyticsViewProps> = ({
 
   return (
     <div className="space-y-4" dir="rtl">
-      <div className="rounded-2xl border border-[#1e2230] bg-[#11131a] p-4">
+      <div className="rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#11131a] p-4">
         <div className="flex items-center gap-2">
           <Radio className="text-cyan-400" size={18} />
-          <h2 className="text-base font-bold text-slate-100">تحلیل بار و مصرف فهام ({regionName})</h2>
+          <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">تحلیل بار و مصرف فهام ({regionName})</h2>
         </div>
-        <p className="mt-1 text-[11px] text-slate-500">
+        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
           قرائت کنتور هوشمند، مشترکین متصل به ترانس و جریان فیدر از سرویس منطقه‌ای
         </p>
       </div>
 
-      <section className="space-y-3 rounded-2xl border border-[#1e2230] bg-[#11131a] p-4">
-        <h3 className="text-sm font-bold text-slate-200">مانیتورینگ کنتورهای هوشمند</h3>
+      <section className="space-y-3 rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#11131a] p-4">
+        <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">مانیتورینگ کنتورهای هوشمند</h3>
         {meterStatus === 'loading' && <StatusLine text="در حال دریافت قرائت کنتورها..." />}
         {meterStatus === 'error' && <ErrorLine text={meterError} />}
         {meterStatus === 'empty' && <EmptyLine text="قرائتی برای این امور ثبت نشده است." />}
@@ -243,9 +243,9 @@ export const LoadAnalyticsView: React.FC<LoadAnalyticsViewProps> = ({
         )}
       </section>
 
-      <section className="space-y-3 rounded-2xl border border-[#1e2230] bg-[#11131a] p-4">
+      <section className="space-y-3 rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#11131a] p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-bold text-slate-200">جریان لحظه‌ای فیدرها</h3>
+          <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">جریان لحظه‌ای فیدرها</h3>
           {loadStatus === 'ready' && (
             <span className="text-[11px] text-cyan-300">
               بیشینه همین صفحه {formatPersianNumber(peakAmps, 1)} آمپر
@@ -259,7 +259,7 @@ export const LoadAnalyticsView: React.FC<LoadAnalyticsViewProps> = ({
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-right text-xs">
-                <thead className="text-[11px] text-slate-500">
+                <thead className="text-[11px] text-slate-500 dark:text-slate-400">
                   <tr>
                     <th className="px-2 py-2 font-medium">فیدر</th>
                     <th className="px-2 py-2 font-medium">شناسه</th>
@@ -267,13 +267,13 @@ export const LoadAnalyticsView: React.FC<LoadAnalyticsViewProps> = ({
                     <th className="px-2 py-2 font-medium">زمان</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#1e2230] text-slate-300">
+                <tbody className="divide-y divide-slate-200 dark:divide-[#1e2230] text-slate-600 dark:text-slate-300">
                   {loads.map((item) => (
                     <tr key={item.id}>
                       <td className="px-2 py-2">{feederNames[item.feeder_id] || 'فیدر'}</td>
                       <td className="px-2 py-2">{toPersianDigits(item.feeder_id)}</td>
                       <td className="px-2 py-2 text-cyan-300">{formatPersianNumber(item.current_amps, 1)} آمپر</td>
-                      <td className="px-2 py-2 text-slate-400">{formatStamp(item.timestamp)}</td>
+                      <td className="px-2 py-2 text-slate-500 dark:text-slate-400">{formatStamp(item.timestamp)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -284,16 +284,16 @@ export const LoadAnalyticsView: React.FC<LoadAnalyticsViewProps> = ({
         )}
       </section>
 
-      <section className="space-y-3 rounded-2xl border border-[#1e2230] bg-[#11131a] p-4">
+      <section className="space-y-3 rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#11131a] p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-sm font-bold text-slate-200">مشترکین فهام</h3>
-          <div className="flex items-center gap-2 text-[11px] text-slate-400">
+          <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">مشترکین فهام</h3>
+          <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
             <span>تعرفه</span>
             <select
               value={tariff}
               onChange={(event) => setTariff(event.target.value as '' | TariffType)}
               aria-label="فیلتر تعرفه مشترک"
-              className="h-8 rounded-lg border border-[#1e2230] bg-[#090a0f] px-2 text-xs text-slate-200 outline-none"
+              className="h-8 rounded-lg border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#090a0f] px-2 text-xs text-slate-700 dark:text-slate-200 outline-none"
             >
               {TARIFFS.map((item) => (
                 <option key={item.label} value={item.value}>{item.label}</option>
@@ -306,7 +306,7 @@ export const LoadAnalyticsView: React.FC<LoadAnalyticsViewProps> = ({
                 setCustomerPage(1);
               }}
               aria-label="تعداد مشترک در هر صفحه"
-              className="h-8 rounded-lg border border-[#1e2230] bg-[#090a0f] px-2 text-xs text-slate-200 outline-none"
+              className="h-8 rounded-lg border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#090a0f] px-2 text-xs text-slate-700 dark:text-slate-200 outline-none"
             >
               {PAGE_SIZES.map((size) => (
                 <option key={size} value={size}>{toPersianDigits(size)}</option>
@@ -321,7 +321,7 @@ export const LoadAnalyticsView: React.FC<LoadAnalyticsViewProps> = ({
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-right text-xs">
-                <thead className="text-[11px] text-slate-500">
+                <thead className="text-[11px] text-slate-500 dark:text-slate-400">
                   <tr>
                     <th className="px-2 py-2 font-medium">شناسه قبض</th>
                     <th className="px-2 py-2 font-medium">ترانس</th>
@@ -329,7 +329,7 @@ export const LoadAnalyticsView: React.FC<LoadAnalyticsViewProps> = ({
                     <th className="px-2 py-2 font-medium">کنتور</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#1e2230] text-slate-300">
+                <tbody className="divide-y divide-slate-200 dark:divide-[#1e2230] text-slate-600 dark:text-slate-300">
                   {customers.map((item) => (
                     <tr key={item.id}>
                       <td className="px-2 py-2">{toPersianDigits(item.bill_id)}</td>
@@ -367,13 +367,13 @@ function Metric({
   icon: React.ComponentType<{ size?: number }>;
 }) {
   return (
-    <div className="rounded-2xl border border-[#1e2230] bg-[#090a0f] px-3 py-2.5">
-      <div className="flex items-center justify-between text-[10px] text-slate-500">
+    <div className="rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#090a0f] px-3 py-2.5">
+      <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
         <span>{label}</span>
         <Icon size={13} />
       </div>
       <div className={`mt-1 text-lg font-semibold leading-none ${tone}`}>
-        {value} <span className="text-[10px] font-normal text-slate-500">{unit}</span>
+        {value} <span className="text-[10px] font-normal text-slate-500 dark:text-slate-400">{unit}</span>
       </div>
     </div>
   );
@@ -391,14 +391,14 @@ function Pager({
   onPage: (page: number) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400">
       <span>صفحه {toPersianDigits(page)} از {toPersianDigits(totalPages)} · {toPersianDigits(total)} رکورد</span>
       <div className="flex items-center gap-1">
         <button
           type="button"
           disabled={page <= 1}
           onClick={() => onPage(page - 1)}
-          className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-slate-300 hover:bg-white/5 disabled:opacity-40"
+          className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 disabled:opacity-40"
         >
           <ChevronRight size={13} /> قبلی
         </button>
@@ -406,7 +406,7 @@ function Pager({
           type="button"
           disabled={page >= totalPages}
           onClick={() => onPage(page + 1)}
-          className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-slate-300 hover:bg-white/5 disabled:opacity-40"
+          className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 disabled:opacity-40"
         >
           بعدی <ChevronLeft size={13} />
         </button>
@@ -417,7 +417,7 @@ function Pager({
 
 function StatusLine({ text }: { text: string }) {
   return (
-    <div className="flex items-center gap-2 py-8 text-xs text-slate-400">
+    <div className="flex items-center gap-2 py-8 text-xs text-slate-500 dark:text-slate-400">
       <Loader2 size={14} className="animate-spin text-cyan-400" />
       {text}
     </div>
@@ -429,5 +429,5 @@ function ErrorLine({ text }: { text: string }) {
 }
 
 function EmptyLine({ text }: { text: string }) {
-  return <div className="py-8 text-center text-xs text-slate-500">{text}</div>;
+  return <div className="py-8 text-center text-xs text-slate-500 dark:text-slate-400">{text}</div>;
 }

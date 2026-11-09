@@ -99,13 +99,13 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 
   return (
     <div className="space-y-6" dir="rtl">
-      <div className="rounded-2xl border border-[#1e2230] bg-[#11131a] shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:border-white/20 p-5 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#11131a] shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:border-slate-300 dark:hover:border-white/20 p-5 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <BarChart3 className="text-emerald-400" size={22} />
-            <h2 className="text-lg font-bold text-slate-100">گزارشات مدیریتی و تحلیلی سلامت ناوگان ({regionName})</h2>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">گزارشات مدیریتی و تحلیلی سلامت ناوگان ({regionName})</h2>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             کاندیدهای تعویض، تلفات ژول و عدم تعادل فاز از سرویس تحلیل
           </p>
         </div>
@@ -119,8 +119,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-2xl border border-[#1e2230] bg-[#11131a] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:border-white/20">
-          <div className="text-xs text-slate-400 mb-1">کاندیداهای تعویض</div>
+        <div className="rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#11131a] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:border-slate-300 dark:hover:border-white/20">
+          <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">کاندیداهای تعویض</div>
           <div className="text-3xl font-bold font-mono text-rose-400 mb-2">
             {candidateStatus === 'loading' ? '…' : toPersianDigits(total)} <span className="text-sm">دستگاه</span>
           </div>
@@ -129,8 +129,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-[#1e2230] bg-[#11131a] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:border-white/20">
-          <div className="text-xs text-slate-400 mb-1">جمع تلفات ژول</div>
+        <div className="rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#11131a] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:border-slate-300 dark:hover:border-white/20">
+          <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">جمع تلفات ژول</div>
           <div className="text-3xl font-bold font-mono text-amber-400 mb-2">
             {lossStatus === 'loading' && <Loader2 size={22} className="inline animate-spin" />}
             {lossStatus === 'ready' && losses && (
@@ -151,8 +151,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-[#1e2230] bg-[#11131a] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:border-white/20">
-          <div className="text-xs text-slate-400 mb-1">شاخص قابلیت اطمینان ناوگان (ASAI)</div>
+        <div className="rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#11131a] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:border-slate-300 dark:hover:border-white/20">
+          <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">شاخص قابلیت اطمینان ناوگان (ASAI)</div>
           <div className="text-3xl font-bold font-mono text-cyan-400 mb-2">
             {toPersianDigits('۹۹.۷۸')}<span className="text-xl">%</span>
           </div>
@@ -160,30 +160,30 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[#1e2230] bg-[#11131a] shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:border-white/20 p-5 shadow-xl space-y-4">
-        <h3 className="text-sm font-bold text-slate-200">هرم سنی ترانسفورماتورهای تحت پایش</h3>
+      <div className="rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#11131a] shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:border-slate-300 dark:hover:border-white/20 p-5 shadow-xl space-y-4">
+        <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">هرم سنی ترانسفورماتورهای تحت پایش</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:border-white/20">
-            <div className="text-xs text-slate-400 mb-1">نوساز (عمر زیر ۵ سال)</div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-white/5 p-4 backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:border-slate-300 dark:hover:border-white/20">
+            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">نوساز (عمر زیر ۵ سال)</div>
             <div className="text-2xl font-bold text-emerald-400 font-mono">{toPersianDigits(ageUnder5 || 12)} دستگاه</div>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:border-white/20">
-            <div className="text-xs text-slate-400 mb-1">میان‌عمر (۵ الی ۱۵ سال)</div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-white/5 p-4 backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:border-slate-300 dark:hover:border-white/20">
+            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">میان‌عمر (۵ الی ۱۵ سال)</div>
             <div className="text-2xl font-bold text-cyan-400 font-mono">{toPersianDigits(age5to15 || 26)} دستگاه</div>
           </div>
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:border-white/20">
-            <div className="text-xs text-slate-400 mb-1">فرسوده (بیش از ۱۵ سال)</div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-white/5 p-4 backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:border-slate-300 dark:hover:border-white/20">
+            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">فرسوده (بیش از ۱۵ سال)</div>
             <div className="text-2xl font-bold text-rose-400 font-mono">{toPersianDigits(ageOver15 || 12)} دستگاه</div>
           </div>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[#1e2230] bg-[#11131a] shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:border-white/20 p-5 shadow-xl space-y-4">
+      <div className="rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#11131a] shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:border-slate-300 dark:hover:border-white/20 p-5 shadow-xl space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-sm font-bold text-rose-400 flex items-center gap-2">
             <AlertOctagon size={16} /> فهرست کاندیداهای تعویض
           </h3>
-          <label className="flex items-center gap-2 text-xs text-slate-400">
+          <label className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
             تعداد در صفحه
             <select
               aria-label="تعداد کاندید در هر صفحه"
@@ -192,7 +192,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 setPageSize(Number(event.target.value));
                 setPage(1);
               }}
-              className="h-8 rounded-lg border border-slate-700 bg-slate-900 px-2 text-slate-200 outline-none"
+              className="h-8 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-slate-700 dark:text-slate-200 outline-none"
             >
               {PAGE_SIZES.map((size) => (
                 <option key={size} value={size}>{toPersianDigits(size)}</option>
@@ -202,18 +202,18 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         </div>
 
         {candidateStatus === 'loading' && (
-          <div className="flex items-center gap-2 py-8 text-xs text-slate-400">
+          <div className="flex items-center gap-2 py-8 text-xs text-slate-500 dark:text-slate-400">
             <Loader2 size={16} className="animate-spin" /> در حال دریافت کاندیدهای تعویض...
           </div>
         )}
         {candidateStatus === 'error' && <p className="py-6 text-xs text-rose-300">{candidateError}</p>}
-        {candidateStatus === 'empty' && <p className="py-6 text-xs text-slate-400">کاندید تعویضی برای این امور ثبت نشده است.</p>}
+        {candidateStatus === 'empty' && <p className="py-6 text-xs text-slate-500 dark:text-slate-400">کاندید تعویضی برای این امور ثبت نشده است.</p>}
 
         {candidateStatus === 'ready' && (
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-right text-xs">
-                <thead className="bg-slate-900/60 text-slate-400 border-b border-slate-800">
+                <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
                   <tr>
                     <th className="py-3 px-3">پست / ترانس</th>
                     <th className="py-3 px-3">فیدر</th>
@@ -226,7 +226,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                     <th className="py-3 px-3">اقدام پیشنهادی</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-slate-600 dark:text-slate-300">
                   {candidates.map((item) => {
                     const id = item.transformer_id ?? item.id;
                     return (
@@ -234,12 +234,12 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                         <td className="py-3 px-3">
                           <button
                             type="button"
-                            className="font-bold text-white hover:text-cyan-400"
+                            className="font-bold text-slate-800 dark:text-white hover:text-cyan-400"
                             onClick={() => id != null && onSelectTransformerId?.(String(id))}
                           >
                             {item.substation_name || item.asset_name || item.name || 'ترانس'}
                           </button>
-                          <div className="mt-0.5 font-mono text-[10px] text-slate-500">{toPersianDigits(id)}</div>
+                          <div className="mt-0.5 font-mono text-[10px] text-slate-500 dark:text-slate-400">{toPersianDigits(id)}</div>
                         </td>
                         <td className="py-3 px-3">{item.feeder_name || '—'}</td>
                         <td className="py-3 px-3 font-mono">{toPersianDigits(item.capacity_kva)} kVA</td>
@@ -256,7 +256,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               </table>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
+            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
               <span>
                 صفحه {toPersianDigits(page)} از {toPersianDigits(totalPages)} · {toPersianDigits(total)} رکورد
               </span>
@@ -265,7 +265,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                   type="button"
                   disabled={page <= 1}
                   onClick={() => setPage((value) => Math.max(1, value - 1))}
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-3 py-1.5 text-slate-200 disabled:opacity-40"
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-slate-700 dark:text-slate-200 disabled:opacity-40"
                 >
                   <ChevronRight size={14} /> قبلی
                 </button>
@@ -273,7 +273,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                   type="button"
                   disabled={page >= totalPages}
                   onClick={() => setPage((value) => value + 1)}
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-3 py-1.5 text-slate-200 disabled:opacity-40"
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-slate-700 dark:text-slate-200 disabled:opacity-40"
                 >
                   بعدی <ChevronLeft size={14} />
                 </button>
@@ -283,21 +283,21 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         )}
       </div>
 
-      <div className="rounded-2xl border border-[#1e2230] bg-[#11131a] shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:border-white/20 p-5 shadow-xl space-y-4">
+      <div className="rounded-2xl border border-slate-200 dark:border-[#1e2230] bg-white dark:bg-[#11131a] shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-300 hover:border-slate-300 dark:hover:border-white/20 p-5 shadow-xl space-y-4">
         <h3 className="text-sm font-bold text-amber-300">ترانس‌های نامتعادل</h3>
         {lossStatus === 'loading' && (
-          <div className="flex items-center gap-2 py-6 text-xs text-slate-400">
+          <div className="flex items-center gap-2 py-6 text-xs text-slate-500 dark:text-slate-400">
             <Loader2 size={16} className="animate-spin" /> در حال دریافت ترانس‌های نامتعادل...
           </div>
         )}
         {lossStatus === 'error' && <p className="py-6 text-xs text-rose-300">{lossError}</p>}
         {lossStatus === 'ready' && unbalanced.length === 0 && (
-          <p className="py-6 text-xs text-slate-400">ترانس نامتعادلی برای این امور ثبت نشده است.</p>
+          <p className="py-6 text-xs text-slate-500 dark:text-slate-400">ترانس نامتعادلی برای این امور ثبت نشده است.</p>
         )}
         {lossStatus === 'ready' && unbalanced.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full text-right text-xs">
-              <thead className="bg-slate-900/60 text-slate-400 border-b border-slate-800">
+              <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
                 <tr>
                   <th className="py-3 px-3">پست / ترانس</th>
                   <th className="py-3 px-3">ظرفیت</th>
@@ -308,12 +308,12 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                   <th className="py-3 px-3">عدم تعادل</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 text-slate-300">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-slate-600 dark:text-slate-300">
                 {unbalanced.map((item) => (
                   <tr key={item.transformer_id}>
                     <td className="py-3 px-3">
-                      <div className="font-bold text-white">{item.substation_name}</div>
-                      <div className="mt-0.5 font-mono text-[10px] text-slate-500">{toPersianDigits(item.transformer_id)}</div>
+                      <div className="font-bold text-slate-800 dark:text-white">{item.substation_name}</div>
+                      <div className="mt-0.5 font-mono text-[10px] text-slate-500 dark:text-slate-400">{toPersianDigits(item.transformer_id)}</div>
                     </td>
                     <td className="py-3 px-3 font-mono">{toPersianDigits(item.capacity_kva)} kVA</td>
                     <td className="py-3 px-3 font-mono">{formatPersianNumber(item.phase_a_amps, 1)}</td>

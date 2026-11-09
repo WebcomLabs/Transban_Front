@@ -1,5 +1,7 @@
 ﻿@import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Vazirmatn", "Segoe UI", Tahoma, "Noto Sans Arabic", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -7,6 +9,9 @@
 
 @layer base {
   :root {
+    color-scheme: light;
+  }
+  .dark {
     color-scheme: dark;
   }
   html {
@@ -15,11 +20,15 @@
   body {
     margin: 0;
     padding: 0;
-    color: #e7e9ee !important;
+    color: #1e293b;
     font-family: var(--font-sans);
-    background-color: #07080b !important;
-    background-image: radial-gradient(ellipse 50% 30% at 100% 0%, rgba(16, 185, 129, 0.05), transparent 60%) !important;
-    background-attachment: fixed !important;
+    background-color: #f1f5f9;
+    background-attachment: fixed;
+  }
+  .dark body {
+    color: #e7e9ee;
+    background-color: #07080b;
+    background-image: radial-gradient(ellipse 50% 30% at 100% 0%, rgba(16, 185, 129, 0.05), transparent 60%);
   }
   button,
   input,
